@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Таблица Менделеева</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#fff;--fg:#1b1b1b;--hint:#8a9099;--off:#eef0f3;--offfg:#b4bac2;--line:#1F3A68}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:12px 14px 6px}
+h1{font-size:18px;margin:0 0 4px}
+p{margin:0;color:var(--hint);font-size:13px}
+.wrap{overflow-x:auto;padding:8px 10px 16px;-webkit-overflow-scrolling:touch}
+.grid{display:grid;grid-template-columns:repeat(18,minmax(38px,1fr));gap:3px;min-width:720px}
+.cell{aspect-ratio:1/1.08;border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-weight:700;font-size:15px;background:var(--off);color:var(--offfg);position:relative;user-select:none}
+.cell small{position:absolute;top:2px;left:4px;font-size:9px;font-weight:400}
+.cell.on{color:#1b1b1b;box-shadow:inset 0 0 0 2px var(--line);cursor:pointer}
+.cell.on:active{transform:scale(.94)}
+.gap{grid-column:1/-1;height:8px}
+#name{position:sticky;left:0;font-size:14px;color:var(--fg);padding:0 14px 10px;min-height:20px}
+.outside{padding:14px;color:#a33}
+</style></head><body>
+<header><h1 id="title">Таблица Менделеева</h1><p id="sub">Нажмите на выделенный элемент — лекция придёт в чат.</p></header>
+<div class="wrap"><div class="grid" id="grid"></div></div>
+<div id="name"></div>
+<script>
+const ELS = [[1, "H", "Водород", 1, 1, "nonmetal"], [2, "He", "Гелий", 1, 18, "noble"], [3, "Li", "Литий", 2, 1, "alkali"], [4, "Be", "Бериллий", 2, 2, "alkearth"], [5, "B", "Бор", 2, 13, "metalloid"], [6, "C", "Углерод", 2, 14, "nonmetal"], [7, "N", "Азот", 2, 15, "nonmetal"], [8, "O", "Кислород", 2, 16, "nonmetal"], [9, "F", "Фтор", 2, 17, "halogen"], [10, "Ne", "Неон", 2, 18, "noble"], [11, "Na", "Натрий", 3, 1, "alkali"], [12, "Mg", "Магний", 3, 2, "alkearth"], [13, "Al", "Алюминий", 3, 13, "post"], [14, "Si", "Кремний", 3, 14, "metalloid"], [15, "P", "Фосфор", 3, 15, "nonmetal"], [16, "S", "Сера", 3, 16, "nonmetal"], [17, "Cl", "Хлор", 3, 17, "halogen"], [18, "Ar", "Аргон", 3, 18, "noble"], [19, "K", "Калий", 4, 1, "alkali"], [20, "Ca", "Кальций", 4, 2, "alkearth"], [21, "Sc", "Скандий", 4, 3, "trans"], [22, "Ti", "Титан", 4, 4, "trans"], [23, "V", "Ванадий", 4, 5, "trans"], [24, "Cr", "Хром", 4, 6, "trans"], [25, "Mn", "Марганец", 4, 7, "trans"], [26, "Fe", "Железо", 4, 8, "trans"], [27, "Co", "Кобальт", 4, 9, "trans"], [28, "Ni", "Никель", 4, 10, "trans"], [29, "Cu", "Медь", 4, 11, "trans"], [30, "Zn", "Цинк", 4, 12, "trans"], [31, "Ga", "Галлий", 4, 13, "post"], [32, "Ge", "Германий", 4, 14, "metalloid"], [33, "As", "Мышьяк", 4, 15, "metalloid"], [34, "Se", "Селен", 4, 16, "nonmetal"], [35, "Br", "Бром", 4, 17, "halogen"], [36, "Kr", "Криптон", 4, 18, "noble"], [37, "Rb", "Рубидий", 5, 1, "alkali"], [38, "Sr", "Стронций", 5, 2, "alkearth"], [39, "Y", "Иттрий", 5, 3, "trans"], [40, "Zr", "Цирконий", 5, 4, "trans"], [41, "Nb", "Ниобий", 5, 5, "trans"], [42, "Mo", "Молибден", 5, 6, "trans"], [43, "Tc", "Технеций", 5, 7, "trans"], [44, "Ru", "Рутений", 5, 8, "trans"], [45, "Rh", "Родий", 5, 9, "trans"], [46, "Pd", "Палладий", 5, 10, "trans"], [47, "Ag", "Серебро", 5, 11, "trans"], [48, "Cd", "Кадмий", 5, 12, "trans"], [49, "In", "Индий", 5, 13, "post"], [50, "Sn", "Олово", 5, 14, "post"], [51, "Sb", "Сурьма", 5, 15, "metalloid"], [52, "Te", "Теллур", 5, 16, "metalloid"], [53, "I", "Иод", 5, 17, "halogen"], [54, "Xe", "Ксенон", 5, 18, "noble"], [55, "Cs", "Цезий", 6, 1, "alkali"], [56, "Ba", "Барий", 6, 2, "alkearth"], [57, "La", "Лантан", 9, 3, "lanth"], [58, "Ce", "Церий", 9, 4, "lanth"], [59, "Pr", "Празеодим", 9, 5, "lanth"], [60, "Nd", "Неодим", 9, 6, "lanth"], [61, "Pm", "Прометий", 9, 7, "lanth"], [62, "Sm", "Самарий", 9, 8, "lanth"], [63, "Eu", "Европий", 9, 9, "lanth"], [64, "Gd", "Гадолиний", 9, 10, "lanth"], [65, "Tb", "Тербий", 9, 11, "lanth"], [66, "Dy", "Диспрозий", 9, 12, "lanth"], [67, "Ho", "Гольмий", 9, 13, "lanth"], [68, "Er", "Эрбий", 9, 14, "lanth"], [69, "Tm", "Тулий", 9, 15, "lanth"], [70, "Yb", "Иттербий", 9, 16, "lanth"], [71, "Lu", "Лютеций", 9, 17, "lanth"], [72, "Hf", "Гафний", 6, 4, "trans"], [73, "Ta", "Тантал", 6, 5, "trans"], [74, "W", "Вольфрам", 6, 6, "trans"], [75, "Re", "Рений", 6, 7, "trans"], [76, "Os", "Осмий", 6, 8, "trans"], [77, "Ir", "Иридий", 6, 9, "trans"], [78, "Pt", "Платина", 6, 10, "trans"], [79, "Au", "Золото", 6, 11, "trans"], [80, "Hg", "Ртуть", 6, 12, "trans"], [81, "Tl", "Таллий", 6, 13, "post"], [82, "Pb", "Свинец", 6, 14, "post"], [83, "Bi", "Висмут", 6, 15, "post"], [84, "Po", "Полоний", 6, 16, "post"], [85, "At", "Астат", 6, 17, "halogen"], [86, "Rn", "Радон", 6, 18, "noble"], [87, "Fr", "Франций", 7, 1, "alkali"], [88, "Ra", "Радий", 7, 2, "alkearth"], [89, "Ac", "Актиний", 10, 3, "act"], [90, "Th", "Торий", 10, 4, "act"], [91, "Pa", "Протактиний", 10, 5, "act"], [92, "U", "Уран", 10, 6, "act"], [93, "Np", "Нептуний", 10, 7, "act"], [94, "Pu", "Плутоний", 10, 8, "act"], [95, "Am", "Америций", 10, 9, "act"], [96, "Cm", "Кюрий", 10, 10, "act"], [97, "Bk", "Берклий", 10, 11, "act"], [98, "Cf", "Калифорний", 10, 12, "act"], [99, "Es", "Эйнштейний", 10, 13, "act"], [100, "Fm", "Фермий", 10, 14, "act"], [101, "Md", "Менделевий", 10, 15, "act"], [102, "No", "Нобелий", 10, 16, "act"], [103, "Lr", "Лоуренсий", 10, 17, "act"], [104, "Rf", "Резерфордий", 7, 4, "trans"], [105, "Db", "Дубний", 7, 5, "trans"], [106, "Sg", "Сиборгий", 7, 6, "trans"], [107, "Bh", "Борий", 7, 7, "trans"], [108, "Hs", "Хассий", 7, 8, "trans"], [109, "Mt", "Мейтнерий", 7, 9, "trans"], [110, "Ds", "Дармштадтий", 7, 10, "trans"], [111, "Rg", "Рентгений", 7, 11, "trans"], [112, "Cn", "Коперниций", 7, 12, "trans"], [113, "Nh", "Нихоний", 7, 13, "post"], [114, "Fl", "Флеровий", 7, 14, "post"], [115, "Mc", "Московий", 7, 15, "post"], [116, "Lv", "Ливерморий", 7, 16, "post"], [117, "Ts", "Теннессин", 7, 17, "halogen"], [118, "Og", "Оганесон", 7, 18, "noble"]], CATS = {"alkali": "#F7C59F", "alkearth": "#FAE29C", "trans": "#F4B6C2", "post": "#C9D6DF", "metalloid": "#BFE3C0", "nonmetal": "#A8DADC", "halogen": "#B5EAD7", "noble": "#CDB4DB", "lanth": "#FFD6A5", "act": "#FFC6A5"};
+const tg = window.Telegram && Telegram.WebApp;
+const q = new URLSearchParams(location.hash.slice(1));
+const have = {};
+(q.get("e") || "").split(",").forEach(p => { const [z, id] = p.split(":"); if (+z && +id) have[+z] = +id; });
+if (q.get("t")) document.getElementById("title").textContent = "🧱 " + q.get("t");
+if (tg) {
+  tg.ready(); tg.expand();
+  const tp = tg.themeParams || {};
+  if (tp.bg_color) document.documentElement.style.setProperty("--bg", tp.bg_color);
+  if (tp.text_color) document.documentElement.style.setProperty("--fg", tp.text_color);
+  if (tp.hint_color) document.documentElement.style.setProperty("--hint", tp.hint_color);
+  if (tg.colorScheme === "dark") { document.documentElement.style.setProperty("--off", "#2b3038");
+    document.documentElement.style.setProperty("--offfg", "#68707b"); document.documentElement.style.setProperty("--line", "#8fb4ff"); }
+}
+const n = Object.keys(have).length;
+document.getElementById("sub").textContent = n ? `Выделено ${n} — с конспектом. Нажмите — лекция придёт в чат.`
+                                              : "Конспектов про элементы пока нет.";
+const grid = document.getElementById("grid");
+ELS.forEach(([z, sym, name, r, c, cat]) => {
+  const d = document.createElement("div");
+  d.className = "cell" + (have[z] ? " on" : "");
+  d.style.gridRow = r >= 9 ? r + 1 : r;  // строка 8 — отступ перед лантаноидами
+  d.style.gridColumn = c;
+  if (have[z]) d.style.background = CATS[cat];
+  d.innerHTML = `<small>${z}</small>${sym}`;
+  d.title = name;
+  d.onclick = () => {
+    document.getElementById("name").textContent = `${z}. ${name}` + (have[z] ? " — отправляю…" : " — конспекта пока нет");
+    if (!have[z]) { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred("warning"); return; }
+    if (tg && tg.sendData) { tg.HapticFeedback && tg.HapticFeedback.impactOccurred("light"); tg.sendData("lec:" + have[z]); }
+    else document.getElementById("name").textContent = "Откройте таблицу кнопкой в боте — тогда лекция придёт в чат.";
+  };
+  grid.appendChild(d);
+});
+const g = document.createElement("div"); g.className = "gap"; g.style.gridRow = 8; grid.appendChild(g);
+</script></body></html>
