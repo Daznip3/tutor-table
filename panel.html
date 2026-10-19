@@ -24,7 +24,8 @@
     document.write(html.replace(/<head>/i, '<head><base href="' + base + '">'));
     document.close();
   } catch (e) {
-    location.replace(base + location.hash);   // запасной путь: открыть напрямую (с предупреждением tuna)
+    const k = new URLSearchParams(location.search).get("k");     // ключ кнопки из меню бота
+    location.replace(base + (k ? "?k=" + encodeURIComponent(k) : "") + location.hash);   // запасной путь: напрямую
   }
 })();
 </script>
