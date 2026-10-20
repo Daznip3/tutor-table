@@ -263,6 +263,8 @@ main{padding-bottom:110px}
 #qs-res{background:none;max-height:72vh;overflow-y:auto;border-radius:0}#qs-res .list{margin-bottom:4px}
 mark{background:rgba(246,183,60,.45);color:inherit;border-radius:3px;padding:0 1px}
 #qs .qs-box{margin-top:6vh}
+#newver{position:fixed;left:12px;right:12px;top:8px;z-index:70;background:linear-gradient(135deg,var(--acc),#7a3fc4);color:#fff;border-radius:14px;padding:9px 12px;display:flex;align-items:center;gap:8px;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+#newver button{margin-left:auto;border:0;border-radius:10px;padding:6px 12px;font:inherit;font-weight:700;background:#fff;color:#2f5fd0;cursor:pointer}#newver .x2{margin-left:0;background:rgba(255,255,255,.2);color:#fff;padding:6px 10px}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
 /* Общие ограничения для длинных имён, адресов и узких экранов. */
 :root{--field-line:#8a9099;--field-line:color-mix(in srgb,var(--fg) 45%,var(--bg))}
@@ -388,9 +390,15 @@ async function fetchT(url, opt, ms) {   // таймаут охватывает �
     finally { clearTimeout(t); }
   }
 }
+let USE_CACHE = false; const STALE = new Map();   // что показано из памяти: адрес → текст кэша
+const pcKey = (what, q) => "pc:" + what + q;
 async function api(what, q = "") {
+  const key = pcKey(what, q);
+  if (USE_CACHE) { try { const c = localStorage.getItem(key); if (c) { STALE.set(key, c); const j = JSON.parse(c); CUR = j.cur || CUR; return j; } } catch (_) {} }
   const j = await fetchT(`api/${what}${q}`, {headers: AUTH, cache: "no-store"}, 9000);
-  CUR = j.cur || CUR; return j;
+  CUR = j.cur || CUR;
+  if (!what.startsWith("search") && !what.startsWith("news")) { try { localStorage.setItem(key, JSON.stringify(j)); } catch (_) {} }
+  return j;
 }
 function fail(ex) {
   app.innerHTML = ex.message === "auth"
@@ -2549,8 +2557,22 @@ const TABS = {home, students, week: () => week(0), hw: hwTab, money: moneyTab, t
 async function go(t) {
   tab = t;
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
-  app.innerHTML = skeleton();
-  try { await TABS[t](); } catch (ex) { fail(ex); }
+  // Мгновенно: показать то, что было в прошлый раз (из памяти), и тихо обновить свежими данными
+  let shown = false; STALE.clear(); USE_CACHE = true;
+  try { await TABS[t](); shown = STALE.size > 0; } catch (_) { shown = false; } finally { USE_CACHE = false; }
+  if (!shown) { app.innerHTML = skeleton(); try { await TABS[t](); } catch (ex) { fail(ex); } }
+  else {
+    const mine = t, old = new Map(STALE);
+    try {
+      let changed = false;
+      for (const [key, txt] of old) {
+        const w = key.slice(3); let fresh; try { fresh = JSON.stringify(await fetchT("api/" + w, {headers: AUTH, cache: "no-store"}, 9000)); } catch (_) { continue; }
+        if (fresh !== txt) { changed = true; try { localStorage.setItem(key, fresh); } catch (_) {} }
+      }
+      const busy = document.getElementById("sheet").classList.contains("on") || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "");
+      if (changed && tab === mine && !busy) { const y = scrollY; await TABS[t](); scrollTo(0, y); }
+    } catch (_) {}
+  }
   if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
 }
 document.querySelectorAll("nav button").forEach(b => { b.innerHTML = `<span class="ni">${b.dataset.i}</span>${b.textContent}`; b.onclick = () => go(b.dataset.t); });
@@ -2614,8 +2636,20 @@ document.addEventListener("keydown", e => {
   else if (e.key === "/") { e.preventDefault(); go("tools").then(() => { const q = document.querySelector("#app input"); if (q) q.focus(); }); }
 });
 // Версию подставляет сервер: прежняя личная ссылка получает новый интерфейс сама.
-const PAGE_VERSION = "2026.10.20-60";
+const PAGE_VERSION = "2026.10.20-63";
 let VERSION_BUSY = false;
+// Новая версия вышла, а открыта сохранённая прежняя (так панель открывается мгновенно): без перезагрузок «в цикле» —
+// просто полоска. Новая версия докачивается в фоне и включится при следующем открытии сама; кнопка — сразу.
+function newVersionBar() {
+  if (document.getElementById("newver")) return;
+  const b = document.createElement("div"); b.id = "newver";
+  b.innerHTML = `✨ Вышла новая версия панели <button onclick="updateNow()">Обновить</button><button class="x2" onclick="this.parentNode.remove()">✕</button>`;
+  document.body.appendChild(b);
+}
+function updateNow() {
+  try { Object.keys(localStorage).filter(k => k.startsWith("panel-html:") || k.startsWith("pg-app:")).forEach(k => localStorage.removeItem(k)); } catch (_) {}
+  location.reload();
+}
 async function checkVersion() {
   if (VERSION_BUSY || document.hidden || (!INIT && !KEY)) return;
   // Не прерывать ввод и действия в открытой карточке.
@@ -2624,7 +2658,7 @@ async function checkVersion() {
   VERSION_BUSY = true;
   try {
     const d = await api("version");
-    if (d.version && d.version !== PAGE_VERSION && PAGE_VERSION !== "__" + "PANEL_VERSION__") location.reload();
+    if (d.version && d.version !== PAGE_VERSION && PAGE_VERSION !== "__" + "PANEL_VERSION__") newVersionBar();
   } catch (_) {} finally { VERSION_BUSY = false; }
 }
 setInterval(checkVersion, 60000);
