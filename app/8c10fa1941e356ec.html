@@ -374,14 +374,27 @@ const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-$
 const plural = (n, a, b, c) => { n = Math.abs(n) % 100; const k = n % 10;
   return (n > 10 && n < 20) ? c : k === 1 ? a : (k >= 2 && k <= 4) ? b : c; };
 
+const DIAG = [];
+function diagSheet() {
+  const slow = DIAG.filter(x => x.all > 3000).length;
+  openSheet(`<div class="sh-h"><b>⏱ Диагностика связи</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
+    <p class="ph">«Ответ» — сколько ждали ответ бота через интернет; «Бот» — сколько бот сам считал (обычно 1–50 мс). Если «Ответ» большой, а «Бот» маленький — тормозит связь (туннель), а не панель.</p>
+    <div class="list">${DIAG.length ? DIAG.slice().reverse().map(x => `<div class="li static"><div class="t">${esc(x.u)}<small>бот ${x.srv === null ? "—" : x.srv + " мс"} · попытка ${x.try}</small></div><span class="v" style="color:${x.all > 3000 ? "var(--bad)" : x.all > 1000 ? "var(--warn)" : "var(--ok)"}">${(x.all / 1000).toFixed(1)} с</span></div>`).join("") : `<div class="empty" style="padding:14px">Пока нет запросов — откройте любую вкладку</div>`}</div>
+    <div class="acts"><button class="act pri wide" onclick="diagSheet()">🔄 Обновить</button></div>
+    <p class="ph">${slow ? `Медленных запросов: ${slow}. ` : ""}Пришлите скриншот этого окна, если панель тормозит.</p>`);
+}
 async function fetchT(url, opt, ms) {   // таймаут охватывает и заголовки, и чтение данных
   for (let i = 0; i < 2; i++) {
     const c = new AbortController(), t = setTimeout(() => c.abort(), ms * (i + 1));
     try {
-      const r = await fetch(url, {...opt, signal: c.signal});
+      const t0 = performance.now(), r = await fetch(url, {...opt, signal: c.signal});
+      const t1 = performance.now();
       if (r.status === 403) throw new Error("auth");
       if (!r.ok) throw new Error("http " + r.status);
-      return await r.json();
+      const j = await r.json(), m = /dur=(\d+)/.exec(r.headers.get("Server-Timing") || "");
+      DIAG.push({u: url.replace(/^api\//, ""), head: Math.round(t1 - t0), all: Math.round(performance.now() - t0), srv: m ? +m[1] : null, try: i + 1});
+      if (DIAG.length > 40) DIAG.shift();
+      return j;
     }
     catch (ex) {
       if (ex.message === "auth" || ex.message.startsWith("http ")) throw ex;
@@ -390,9 +403,15 @@ async function fetchT(url, opt, ms) {   // таймаут охватывает �
     finally { clearTimeout(t); }
   }
 }
+let USE_CACHE = false; const STALE = new Map();   // что показано из памяти: адрес → текст кэша
+const pcKey = (what, q) => "pc:" + what + q;
 async function api(what, q = "") {
+  const key = pcKey(what, q);
+  if (USE_CACHE) { try { const c = localStorage.getItem(key); if (c) { STALE.set(key, c); const j = JSON.parse(c); CUR = j.cur || CUR; return j; } } catch (_) {} }
   const j = await fetchT(`api/${what}${q}`, {headers: AUTH, cache: "no-store"}, 9000);
-  CUR = j.cur || CUR; return j;
+  CUR = j.cur || CUR;
+  if (!what.startsWith("search") && !what.startsWith("news")) { try { localStorage.setItem(key, JSON.stringify(j)); } catch (_) {} }
+  return j;
 }
 function fail(ex) {
   app.innerHTML = ex.message === "auth"
@@ -1549,6 +1568,7 @@ async function operationsTab() { TILE_N = 0;
       ${li('🗑', 'Корзина', jr.trash.length ? 'Можно вернуть: ' + jr.trash.length : 'Пусто', '', 'trashSheet()')}
       ${li('📆', 'Календари, копия, обновления', 'Google, Яндекс, iCloud · резервная копия · версия бота', '', 'systemSheet()')}
       ${li('📲', 'Панель как приложение', 'Значок на экране телефона или компьютера', '', 'installSheet()')}
+      ${li('⏱', 'Диагностика связи', 'Почему панель медленная — время каждого запроса', '', 'diagSheet()')}
       ${li('✨', 'Что нового', 'Последние обновления бота и панели', '', "(NEWS ? Promise.resolve(NEWS) : api('overview').then(o => NEWS = o.news)).then(n => newsSheet(n, true))")}
       ${li('🔑', 'Подключения', 'Календари, GitHub, Claude, «Мой налог»', '', 'connectSheet()')}
       ${li('🎨', 'Оформление и профиль бота', 'Цвет, аватарка, описание, QR-код', '', 'styleSheet()')}
@@ -2551,8 +2571,22 @@ const TABS = {home, students, week: () => week(0), hw: hwTab, money: moneyTab, t
 async function go(t) {
   tab = t;
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
-  app.innerHTML = skeleton();
-  try { await TABS[t](); } catch (ex) { fail(ex); }
+  // Мгновенно: показать то, что было в прошлый раз (из памяти), и тихо обновить свежими данными
+  let shown = false; STALE.clear(); USE_CACHE = true;
+  try { await TABS[t](); shown = STALE.size > 0; } catch (_) { shown = false; } finally { USE_CACHE = false; }
+  if (!shown) { app.innerHTML = skeleton(); try { await TABS[t](); } catch (ex) { fail(ex); } }
+  else {
+    const mine = t, old = new Map(STALE);
+    try {
+      let changed = false;
+      for (const [key, txt] of old) {
+        const w = key.slice(3); let fresh; try { fresh = JSON.stringify(await fetchT("api/" + w, {headers: AUTH, cache: "no-store"}, 9000)); } catch (_) { continue; }
+        if (fresh !== txt) { changed = true; try { localStorage.setItem(key, fresh); } catch (_) {} }
+      }
+      const busy = document.getElementById("sheet").classList.contains("on") || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "");
+      if (changed && tab === mine && !busy) { const y = scrollY; await TABS[t](); scrollTo(0, y); }
+    } catch (_) {}
+  }
   if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
 }
 document.querySelectorAll("nav button").forEach(b => { b.innerHTML = `<span class="ni">${b.dataset.i}</span>${b.textContent}`; b.onclick = () => go(b.dataset.t); });
@@ -2616,7 +2650,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === "/") { e.preventDefault(); go("tools").then(() => { const q = document.querySelector("#app input"); if (q) q.focus(); }); }
 });
 // Версию подставляет сервер: прежняя личная ссылка получает новый интерфейс сама.
-const PAGE_VERSION = "2026.10.20-61";
+const PAGE_VERSION = "2026.10.20-64";
 let VERSION_BUSY = false;
 // Новая версия вышла, а открыта сохранённая прежняя (так панель открывается мгновенно): без перезагрузок «в цикле» —
 // просто полоска. Новая версия докачивается в фоне и включится при следующем открытии сама; кнопка — сразу.
