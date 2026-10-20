@@ -93,7 +93,7 @@ tr.more td{white-space:normal;background:var(--bg2);color:var(--fg);font-size:14
 nav button{font-size:13.5px}
 .click{cursor:pointer}.click:active{opacity:.6}
 #veil{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20;display:none}
-#sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-height:92vh;overflow-y:auto;background:var(--bg2);
+#sheet{overflow-x:hidden;overscroll-behavior-x:none;touch-action:pan-y;position:fixed;left:0;right:0;bottom:0;z-index:21;max-height:92vh;overflow-y:auto;background:var(--bg2);
   border-radius:16px 16px 0 0;padding:14px 12px 28px;transform:translateY(105%);transition:transform .22s ease;
   max-width:760px;margin:0 auto;-webkit-overflow-scrolling:touch}
 #sheet.on{transform:none}
@@ -115,15 +115,18 @@ nav button{font-size:13.5px}
   padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
 #toast.on{opacity:1}
 .pre{white-space:pre-wrap}
-.ans img{width:100%;border-radius:10px;margin-top:8px;display:block;background:var(--bg2);min-height:60px}
+.ans{overflow:hidden;min-width:0}.ans img{width:100%;max-width:100%;height:auto;object-fit:contain;border-radius:10px;margin-top:8px;display:block;background:var(--bg2);min-height:60px}
 #imgv{position:fixed;inset:0;background:#000;z-index:40;display:none;overflow:auto;-webkit-overflow-scrolling:touch}
-#imgv img{width:100%;display:block;touch-action:pinch-zoom}
+#imgv img{width:100%;max-width:100%;height:auto;display:block;touch-action:pan-y pinch-zoom}
 #imgv .x{position:fixed;top:12px;right:12px;background:rgba(255,255,255,.2);color:#fff}
 .grades{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:8px 0}
 textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-height:80px;resize:vertical}
 .ef{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
 .ef:first-child{border-top:0}.ef span{color:var(--hint)}.ef b{font-weight:500;text-align:right}
 .ev.free{border-left:3px dashed var(--ok);background:rgba(46,155,95,.07);color:var(--ok)}
+.seg{display:flex;gap:4px;padding:3px;border-radius:14px;background:var(--bg2);margin:8px 0}.seg button{flex:1;border:0;border-radius:11px;padding:9px 6px;background:transparent;color:var(--fg);font:inherit;font-size:14px;transition:background .2s,transform .15s}.seg button.on{background:var(--acc);color:var(--accfg);font-weight:600}.seg button:active{transform:scale(.97)}
+.dayrail{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin:0 -2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.dayrail::-webkit-scrollbar{display:none}
+.dchip{position:relative;flex:0 0 46px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 0;border-radius:14px;border:1px solid var(--line);background:transparent;color:var(--fg);font:inherit}.dchip small{font-size:11px;opacity:.7}.dchip b{font-size:16px}.dchip.on{background:var(--acc);color:var(--accfg);border-color:transparent}.dchip i{position:absolute;top:4px;right:6px;width:7px;height:7px;border-radius:50%;background:#22c55e}
 .hwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .hgrid{position:relative;display:grid;grid-template-columns:repeat(7,minmax(108px,1fr));gap:4px;padding-left:38px;min-width:800px}
 .hcol .hh{height:30px;font-size:13px;font-weight:600;text-align:center;line-height:30px}
@@ -382,6 +385,11 @@ html,body{overflow-x:clip}
 #tmr svg{width:26px;height:26px}#tmr.warn{background:linear-gradient(135deg,#f6b73c,#f08a24)}#tmr.over{background:linear-gradient(135deg,#f0645a,#d64545);animation:pulse 1.2s infinite}
 @keyframes pulse{50%{transform:translateX(-50%) scale(1.05)}}
 .qnote textarea{min-height:90px;background:var(--bg2);border:0}
+.attn{display:flex;gap:8px;overflow-x:auto;margin:0 -2px 12px;padding:0 2px;scrollbar-width:none}.attn::-webkit-scrollbar{display:none}
+.attn button{flex:none;border:0;border-radius:14px;padding:10px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;background:var(--bg);color:var(--fg);animation:pop .35s var(--out) both}
+.attn .bad{background:rgba(214,69,69,.14);color:var(--bad)}.attn .warn{background:rgba(217,130,43,.16);color:var(--warn)}.attn .acc{background:var(--soft);color:var(--acc)}
+.attn .ok{color:var(--ok);font-size:13.5px;padding:4px 2px}
+.dline.in{padding:0 0 6px}.dline.in .dlh{margin:-4px 0 8px}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
 /* Общие ограничения для длинных имён, адресов и узких экранов. */
 :root{--field-line:#8a9099;--field-line:color-mix(in srgb,var(--fg) 45%,var(--bg))}
@@ -676,7 +684,8 @@ function heroHtml(d, p) {
     <h1>${greet(now.getHours())}${nm ? ", " + esc(nm) : ""} 👋</h1>
     <div class="hrow"><div class="hn"><div class="sub">${esc(d.month)} · заработано ${rec ? '<span class="badge-rec">🏆 рекорд</span>' : ""}</div>
       <div class="big" data-count="${d.total}" data-fmt="m">${money(d.total)}</div>
-      <div class="sub">${G ? (d.total >= G ? `🎯 цель месяца взята! +${money(d.total - G)}` : `до цели ${money(G - d.total)} · с записанными ${money(d.total + d.planned)}`) : p && p.best ? (rec ? `лучше прошлого рекорда на ${money(d.total - p.best)}` : `до рекорда ${money(p.best - d.total)}`) : `прогноз ${money(d.total + d.planned)}`}</div>
+      <div class="sub">${d.cnt} ${plural(d.cnt, "занятие", "занятия", "занятий")}${d.minutes ? " · " + Math.round(d.minutes / 6) / 10 + " ч" : ""} · прогноз ${money(d.total + d.planned)}</div>
+      <div class="sub">${G ? (d.total >= G ? `🎯 цель месяца взята! +${money(d.total - G)}` : `до цели ${money(G - d.total)} · с записанными ${money(d.total + d.planned)}`) : p && p.best ? (rec ? `лучше прошлого рекорда на ${money(d.total - p.best)}` : `до рекорда ${money(p.best - d.total)}`) : (d.prev ? `прошлый месяц ${money(d.prev)}` : "")}</div>
       ${p ? spark(p.months.map(m => m.total + m.planned), "#fff") : ""}</div>
       <div class="ringbtn" onclick="goalSet()" title="Цель месяца">${ring(pct, Math.round(pct * 100) + "%", G ? "🎯 цели" : p && p.best ? "от рекорда" : "от прогноза")}</div></div>
     ${p && p.next ? `<div class="next" onclick="${LS[p.next.id] ? `openLesson(${p.next.id})` : "go('week')"}">⏭ <div><b>${hm(p.next.start)}</b> ${esc(p.next.name)}<br><small style="opacity:.85">${dShort(p.next.start)} · ${esc(p.next.type)}</small></div>
@@ -810,7 +819,7 @@ async function previewPick() {
 }
 
 // ---------- 🕐 таймлайн дня ----------
-function dayLine(items) {
+function dayLine(items, inner) {
   const now = new Date(Date.now() + SKEW), ls = items.filter(x => x.start);
   if (!ls.length) return "";
   const t = x => { const d = dt(x); return d.getHours() + d.getMinutes() / 60; };
@@ -818,7 +827,7 @@ function dayLine(items) {
   const pos = h => ((h - a) / (b - a) * 100).toFixed(2) + "%", nh = now.getHours() + now.getMinutes() / 60;
   const left = ls.filter(x => dt(x.end) > now);
   const mins = left.reduce((s, x) => s + (dt(x.end) - Math.max(dt(x.start), now)) / 60000, 0);
-  return `<div class="card dline"><div class="dlh"><b>🕐 День</b><span>${left.length ? `осталось ${left.length} ${plural(left.length, "занятие", "занятия", "занятий")} · ${Math.round(mins / 6) / 10} ч` : "все занятия позади 🎉"}</span></div>
+  return `<div class="${inner ? "dline in" : "card dline"}"><div class="dlh"><b>${inner ? "" : "🕐 День"}</b><span>${left.length ? `осталось ${left.length} ${plural(left.length, "занятие", "занятия", "занятий")} · ${Math.round(mins / 6) / 10} ч` : "все занятия позади 🎉"}</span></div>
     <div class="dlbar">${ls.map(x => `<i class="${dt(x.end) < now ? "past" : ""}${x.kind === "group" ? " grp" : ""}" style="left:${pos(t(x.start))};width:calc(${pos(t(x.end))} - ${pos(t(x.start))})" title="${hm(x.start)} ${esc(x.name)}" ${x.kind === "lesson" ? `onclick="openLesson(${x.id})"` : ""}></i>`).join("")}
       ${nh > a && nh < b ? `<em style="left:${pos(nh)}"></em>` : ""}</div>
     <div class="dlx">${Array.from({length: Math.floor((b - a) / 3) + 1}, (_, i) => `<span style="left:${pos(a + i * 3)}">${a + i * 3}</span>`).join("")}</div></div>`;
@@ -899,28 +908,24 @@ async function home(dIn, pIn) {
   MANUAL = d.manual;
   const hrs = Math.round(d.minutes / 6) / 10;
   const today = d.today.filter(x => x.kind === "lesson" || x.kind === "group");
+  // Главная без повторов: деньги месяца — только в шапке; ниже — то, что требует действия, и сегодняшний день
+  const att = [d.debt ? [`💸 Должны ${money(d.debt)}`, `document.getElementById('debts').scrollIntoView({behavior:'smooth'})`, "bad"] : null,
+    d.hw_wait ? [`📝 Проверить ДЗ · ${d.hw_wait}`, "go('hw')", "warn"] : null,
+    d.pending && d.pending.length ? [`⏳ Подтвердить · ${d.pending.length}`, `document.getElementById('pend').scrollIntoView({behavior:'smooth'})`, "acc"] : null,
+    d.unmarked && d.unmarked.length ? [`✍️ Отметить · ${d.unmarked.length}`, `document.getElementById('unm').scrollIntoView({behavior:'smooth'})`, "acc"] : null].filter(Boolean);
   app.innerHTML = heroHtml(d, p || null) + `
-  <div class="kpis" style="margin-bottom:12px">
-    <div class="kpi"><span>${esc(d.month)}</span><b data-count="${d.total}" data-fmt="m">${money(d.total)}</b>
-      <span>${d.cnt} ${plural(d.cnt,"занятие","занятия","занятий")}${hrs ? ` · ${hrs} ч` : ""}</span></div>
-    <div class="kpi"><span>Прогноз на месяц</span><b>${money(d.total + d.planned)}</b>
-      <span>ещё ${d.pcnt} ${plural(d.pcnt,"занятие","занятия","занятий")} впереди${d.prev ? ` · прошлый ${money(d.prev)}` : ""}</span></div>
-    <div class="kpi"><span>Долги учеников</span><b class="${d.debt ? "down" : ""}">${money(d.debt)}</b>
-      <span>${d.debtors.length} чел.</span></div>
-    <div class="kpi click" onclick="go('hw')"><span>Задания</span><b>${d.hw_wait}</b><span>ждут проверки</span></div>
-  </div>
-  ${dayLine(today)}
-  <div class="acts" style="margin-top:0"><button class="act pri wide" onclick="pickStart({})">➕ Записать ученика</button></div>
-  ${d.pending && d.pending.length ? `<div class="card"><h2>Ждут подтверждения · ${d.pending.length}</h2>
+  ${att.length ? `<div class="attn">${att.map(([t, on, c]) => `<button class="${c}" onclick="${on}">${t}</button>`).join("")}</div>` : `<div class="attn"><span class="ok">✅ Всё отмечено, долгов и непроверенных ДЗ нет</span></div>`}
+  ${d.pending && d.pending.length ? `<div class="card" id="pend"><h2>Ждут подтверждения · ${d.pending.length}</h2>
     ${d.pending.map(x => lessonRow(x, true)).join("")}</div>` : ""}
-  ${d.unmarked && d.unmarked.length ? `<div class="card"><h2>Отметьте, как прошло и оплачено · ${d.unmarked.length}</h2>
+  ${d.unmarked && d.unmarked.length ? `<div class="card" id="unm"><h2>Отметьте, как прошло и оплачено · ${d.unmarked.length}</h2>
     ${d.unmarked.slice().reverse().map(x => lessonRow(x, true)).join("")}</div>` : ""}
   <div class="two">
     <div class="card"><h2>Сегодня · ${today.length} ${plural(today.length,"занятие","занятия","занятий")}</h2>
+      ${dayLine(today, true)}
       ${today.length ? today.map(x => lessonRow(x)).join("") : `<div class="empty">Занятий нет — можно выдохнуть 🙂</div>`}</div>
-    <div class="card"><h2>Кто должен</h2>
-      ${d.debtors.length ? d.debtors.map(x => `<div class="row drow">${ava(x.name)}<div class="n click" data-sid="${x.id}">${esc(x.name)}<small>${x.n ? x.n + " " + plural(x.n,"занятие","занятия","занятий") : ""}</small></div>
-        <div class="v debt">${money(x.sum)}</div><button class="act" onclick="paySheet(${x.id})">💳</button><button class="act" onclick="studentAction('askpayment',{sid:${x.id}},this)">📨 Запросить оплату</button></div>`).join("") : `<div class="empty">Никто не должен ✅</div>`}</div>
+    ${d.debtors.length ? `<div class="card" id="debts"><h2>Кто должен · ${money(d.debt)}</h2>
+      ${d.debtors.map(x => `<div class="row drow">${ava(x.name)}<div class="n click" data-sid="${x.id}">${esc(x.name)}<small>${x.n ? x.n + " " + plural(x.n,"занятие","занятия","занятий") : ""}</small></div>
+        <div class="v debt">${money(x.sum)}</div><button class="act" onclick="paySheet(${x.id})">💳</button><button class="act" onclick="studentAction('askpayment',{sid:${x.id}},this)">📨 Запросить оплату</button></div>`).join("")}</div>` : ""}
   </div>` + (p ? pulseHtml(p, d) : "") + `<div class="card qnote"><h2>🗒 Заметки на полях</h2><textarea id="qn" placeholder="Что не забыть: купить мел, проверить пробник Пети, позвонить маме Ани…" oninput="qnSave()">${esc(d.qnote || "")}</textarea><div class="hint" id="qn-st">сохраняется само</div></div>`;
   animateHero(); NEWS = d.news; HOME = p ? {d, p} : null;
   app.querySelectorAll(".heat").forEach(h => h.scrollLeft = h.scrollWidth);
@@ -1085,7 +1090,7 @@ function listView(d) {
     html += `<div class="day${ds === todayS ? " today" : ""}"><h3>${WD[i]} <span>${day.getDate()} ${MON[day.getMonth()]}</span>${dl.length ? `<em class="dsum">${dl.length} · ${money(dsum)}</em>` : ""}</h3>
       ${dl.length ? `<div class="dload"><i style="width:${Math.min(100, dl.length / 6 * 100)}%"></i></div>` : ""}
       ${ev.length ? ev.map(x => nowLine(x) + `<div ${x.kind === "lesson" ? `data-lid="${x.id}" ` : x.kind === "free" ? `onclick="bookFree('${x.start}','${x.end}')" ` : ""}class="${x.kind === "lesson" || x.kind === "free" ? "click " : ""}${evCls(x, d.now)}">
-        ${x.kind === "block" ? "" : `<span class="tm">${hm(x.start)}${x.kind === "free" ? "–" + hm(x.end) : ""}</span>`}${x.kind === "free" ? "Свободно · ➕ записать" : esc(x.name)}${x.type ? `<br><small style="color:var(--hint)">${esc(x.type)}</small>` : ""}</div>`).join("")
+        ${x.kind === "block" ? "" : `<span class="tm">${hm(x.start)}${x.kind === "free" ? "–" + hm(x.end) : ""}</span>`}${x.kind === "free" ? "Свободно · записать или предложить" : esc(x.name)}${x.type ? `<br><small style="color:var(--hint)">${esc(x.type)}</small>` : ""}</div>`).join("")
         : `<div class="empty" style="font-size:13px">нет занятий</div>`}${ev.length && !nowDone ? `<div class="nowline"><span>сейчас ${hm(d.now)}</span></div>` : ""}</div>`;
   }
   return `<div class="days">${html}</div>`;
@@ -1715,14 +1720,51 @@ async function pickDraw() {
   let times = [];
   try { times = (await api("slots", `?date=${P.day}&dur=${P.dur}${P.replaces ? "&exclude=" + P.replaces : ""}`)).times; } catch (_) {}
   if (P.from) times = times.filter(t => t >= P.from && (!P.to || t < P.to));
+  const all = times.length;
+  if (!P.all) times = niceTimes(times);
+  const hidden = all - times.length;
   const tname = (TYPES.find(t => t.id === P.tid) || {}).name || "";
+  const offer = !!P.offer && !P.replaces, offs = P.offs || (P.offs = []);
+  const has = t => offs.some(o => o.day === P.day && o.t === t);
   openSheet(pickHead(title) + `<div class="empty" style="margin-top:-6px">${esc(tname)} · ${P.dur} мин</div>
-    ${P.fixedDay ? "" : `<div class="hwrap"><div class="chips" style="flex-wrap:nowrap">${days.map(d =>
-      `<button class="chip${ymd(d) === P.day ? " on" : ""}" style="white-space:nowrap" onclick="P.day='${ymd(d)}';pickDraw()">${WD[(d.getDay() + 6) % 7]} ${d.getDate()}</button>`).join("")}</div></div>`}
+    ${P.replaces ? "" : `<div class="seg"><button class="${offer ? "" : "on"}" onclick="P.offer=false;pickDraw()">✅ Записать сразу</button><button class="${offer ? "on" : ""}" onclick="P.offer=true;pickDraw()">📨 Предложить время</button></div>`}
+    ${offer ? `<div class="empty" style="margin:0 0 6px">Отметьте до ${PMAX} вариантов (можно в разные дни) — ученик выберет одним нажатием и сразу будет записан.</div>` : ""}
+    ${P.fixedDay ? "" : `<div class="dayrail">${days.map(d =>
+      `<button class="dchip${ymd(d) === P.day ? " on" : ""}" onclick="P.day='${ymd(d)}';pickDraw()"><small>${WD[(d.getDay() + 6) % 7]}</small><b>${d.getDate()}</b>${offs.some(o => o.day === ymd(d)) ? "<i></i>" : ""}</button>`).join("")}</div>`}
     <h2 style="margin-top:10px">Свободное время · ${dShort(P.day + "T00:00")}</h2>
-    <div class="chips">${times.map(t => `<button class="chip" onclick="pickConfirm('${t}')">${t}</button>`).join("") || `<span class="empty">Свободных окон нет — выберите другой день или своё время</span>`}</div>
+    <div class="chips">${times.map(t => offer
+      ? `<button class="chip${has(t) ? " on" : ""}" onclick="offToggle('${t}')">${has(t) ? "✓ " : ""}${t}</button>`
+      : `<button class="chip" onclick="pickConfirm('${t}')">${t}</button>`).join("") || `<span class="empty">Свободных окон нет — выберите другой день или своё время</span>`}
+      ${hidden > 0 ? `<button class="chip" onclick="P.all=true;pickDraw()">ещё ${hidden}…</button>` : P.all && all > 6 ? `<button class="chip" onclick="P.all=false;pickDraw()">меньше</button>` : ""}</div>
     <div class="tools" style="margin-top:12px"><input id="ptime" type="time" style="flex:0 0 130px;min-width:0">
-      <button class="act" style="flex:1" onclick="const v=document.getElementById('ptime').value;v?pickConfirm(v):toast('Укажите время')">Своё время</button></div>`);
+      <button class="act" style="flex:1" onclick="const v=document.getElementById('ptime').value;v?${offer ? "offToggle(v)" : "pickConfirm(v)"}:toast('Укажите время')">Своё время</button></div>
+    ${offer ? `<div class="card" style="margin-top:12px"><h2>Выбрано: ${offs.length}</h2><div class="chips">${offs.sort((a, b) => (a.day + a.t).localeCompare(b.day + b.t)).map((o, i) =>
+        `<button class="chip on" onclick="offDel(${i})">${dShort(o.day + "T" + o.t)} ✕</button>`).join("") || `<span class="empty">Пока ничего</span>`}</div>
+      <div class="acts"><button class="act pri wide" ${offs.length ? "" : "disabled"} onclick="offSend()">📨 Отправить ученику (${offs.length})</button></div></div>` : ""}`);
+}
+const PMAX = 5;
+function niceTimes(ts) {           // целые часы/получасы и «встык» к занятиям; остальное — под «ещё»
+  const set = new Set(ts), mm = t => +t.slice(3), prev = t => { const x = +t.slice(0, 2) * 60 + mm(t) - 5; return String(Math.floor(x / 60)).padStart(2, "0") + ":" + String(x % 60).padStart(2, "0"); };
+  const out = ts.filter(t => mm(t) % 30 === 0 || !set.has(prev(t)));
+  return out.length ? out : ts.slice(0, 8);
+}
+function offToggle(t) {
+  const o = P.offs, i = o.findIndex(x => x.day === P.day && x.t === t);
+  if (i >= 0) o.splice(i, 1);
+  else if (o.length >= PMAX) return toast(`Не больше ${PMAX} вариантов`);
+  else o.push({day: P.day, t});
+  if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+  pickDraw();
+}
+function offDel(i) { P.offs.splice(i, 1); pickDraw(); }
+async function offSend() {
+  if (!P.offs.length) return;
+  if (!(await confirmAsk(`Отправить ${P.name} ${P.offs.length} вариант(а) времени? Сообщение придёт сразу.`))) return;
+  try {
+    const j = await post("card", {action: "offer", sid: P.sid, times: P.offs.map(o => [P.tid, o.day + "T" + o.t])});
+    toast(j.note); if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+    SHEET_BACK = null; closeSheet();
+  } catch (ex) { toast(ex.message); }
 }
 async function pickConfirm(t, force) {
   const start = P.day + "T" + t;
@@ -3144,7 +3186,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === "/") { e.preventDefault(); go("tools").then(() => { const q = document.querySelector("#app input"); if (q) q.focus(); }); }
 });
 // Версию подставляет сервер: прежняя личная ссылка получает новый интерфейс сама.
-const PAGE_VERSION = "2026.10.20-82";
+const PAGE_VERSION = "2026.10.20-85";
 let VERSION_BUSY = false;
 // Новая версия вышла, а открыта сохранённая прежняя (так панель открывается мгновенно): без перезагрузок «в цикле» —
 // просто полоска. Новая версия докачивается в фоне и включится при следующем открытии сама; кнопка — сразу.
