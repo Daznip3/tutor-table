@@ -55,6 +55,13 @@ a.lk{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:14
 .err{text-align:center;color:var(--hint);padding:50px 20px}
 .badge{display:inline-block;margin-top:8px;background:rgba(255,255,255,.2);border-radius:20px;padding:4px 10px;font-size:13px;font-weight:600}
 .page{display:none}.page.on{display:block}
+.mini{flex:none;border:0;border-radius:10px;padding:7px 10px;font:inherit;font-size:13px;font-weight:600;background:var(--soft);color:var(--acc);cursor:pointer;transition:transform .15s}
+.mini:active{transform:scale(.95)}.mini:disabled{opacity:.7}.mini.busy{opacity:.5}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,24px) scale(.96);opacity:0;background:rgba(20,20,22,.92);color:#fff;
+  padding:10px 16px;border-radius:14px;font-size:14px;z-index:30;display:flex;gap:8px;align-items:center;transition:opacity .25s,transform .45s var(--spring);pointer-events:none;max-width:90vw}
+#toast.on{opacity:1;transform:translate(-50%,0) scale(1)}#toast path{stroke-dasharray:24;stroke-dashoffset:24;animation:draw .45s .1s var(--out) forwards}
+#ptr{position:fixed;left:50%;top:10px;z-index:6;width:36px;height:36px;margin-left:-18px;border-radius:50%;background:var(--bg);box-shadow:0 4px 14px rgba(0,0,0,.15);display:grid;place-items:center;transform:translateY(-70px);opacity:0;transition:transform .3s var(--spring),opacity .2s}
+@keyframes spin{to{transform:rotate(360deg)}}#ptr.spin span{animation:spin .8s linear infinite;display:inline-block}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.chart .ln{stroke-dashoffset:0}}
 </style></head><body>
 <main id="app"><div class="skel" style="height:200px"></div><div class="skel"></div><div class="skel"></div></main>
@@ -135,13 +142,28 @@ function render() {
         <p style="color:var(--hint);font-size:13px;margin-bottom:0">🟢 было · 🟠 ждёт оплаты · 🔴 пропуск</p>` : `<div class="empty">Пока нет проведённых занятий</div>`}</div>
       ${d.pays.length || d.balance !== null ? `<div class="card"><h2>Оплаты</h2>${d.balance !== null ? `<p style="margin-top:0">${d.balance < 0 ? `💳 К оплате: <b>${money(-d.balance)}</b>` : d.balance > 0 ? `💰 Оплачено вперёд: <b>${money(d.balance)}</b>` : "Долгов нет ✅"}</p>` : ""}
         ${d.pays.map(p => `<div class="row"><div class="ic">💳</div><div class="n">${esc(p.at.split("-").reverse().join("."))}</div><b>${money(p.amount)}</b></div>`).join("")}</div>` : ""}`,
-    lib: `<div class="card"><h2>Лекции и материалы · ${d.lib.length}</h2>${d.lib.length ? d.lib.map(x => `<div class="row"><div class="ic">${x.kind === "lec" ? "📒" : "📦"}</div><div class="n">${esc(x.title)}${x.section ? `<small>${esc(x.section)}</small>` : ""}</div></div>`).join("")
-      : `<div class="empty">Преподаватель пока ничего не открыл</div>`}<p style="color:var(--hint);font-size:13px">Получить файлы — в боте: «🎓 Личный кабинет → 📚 Лекции и задания».</p><button class="btn soft" onclick="toBot()">Открыть в боте</button></div>`
+    lib: `<div class="card"><h2>Лекции и материалы · ${d.lib.length}</h2>${d.lib.length ? d.lib.map(x => `<div class="row"><div class="ic">${x.kind === "lec" ? "📒" : "📦"}</div><div class="n">${esc(x.title)}${x.section ? `<small>${esc(x.section)}</small>` : ""}</div><button class="mini" onclick="act({action:'lib',id:${x.id}},this)">📩 Прислать</button></div>`).join("")
+      : `<div class="empty">Преподаватель пока ничего не открыл</div>`}<p style="color:var(--hint);font-size:13px">«📩 Прислать» — файлы придут вам в чат с ботом.</p></div>`
   };
   app.innerHTML = `<div class="seg">${[["home", "🏠", "Главная"], ["hw", "📝", "Задания"], ["prog", "📈", "Прогресс"], ["lib", "📚", "Материалы"]].map(([k, i, t]) =>
     `<button class="${k === PAGE ? "on" : ""}" onclick="show('${k}')"><i>${i}</i>${t}</button>`).join("")}</div>
     ${Object.entries(pages).map(([k, h]) => `<section class="page${k === PAGE ? " on in" : ""}" id="p-${k}">${h}</section>`).join("")}`;
 }
+async function act(body, btn) {
+  if (btn) { btn.disabled = true; btn.classList.add("busy"); }
+  try {
+    const r = await fetch(BASE + "api/me", {method: "POST", headers: {"X-Init-Data": INIT, "Content-Type": "application/json", "tuna-skip-browser-warning": "1"}, body: JSON.stringify(body)});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || "Не получилось");
+    toast(j.note || "Готово", true); try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred("success"); } catch (_) {}
+    if (btn) btn.textContent = "✓ В чате";
+  } catch (ex) { toast(ex.message); if (btn) btn.disabled = false; }
+  finally { if (btn) btn.classList.remove("busy"); }
+}
+let toastT = 0;
+function toast(t, ok) { let el = document.getElementById("toast"); if (!el) { el = document.createElement("div"); el.id = "toast"; document.body.appendChild(el); }
+  el.innerHTML = (ok ? '<svg width="18" height="18" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' : "") + `<span>${esc(t)}</span>`;
+  el.classList.remove("on"); void el.offsetWidth; el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on"), 2600); }
 function hwRow(h) { const [t, c] = HWS[h.status] || [h.status, ""];
   return `<div class="row"><div class="ic">📝</div><div class="n">${esc(h.text || "Задание")}<small>${esc(h.at.split("-").reverse().join("."))}${h.deadline ? " · до " + esc(h.deadline) : ""}${h.grade ? " · оценка " + esc(h.grade) : ""}</small>${h.comment ? `<small>💬 ${esc(h.comment)}</small>` : ""}</div><span class="tag ${c}">${t}</span></div>`; }
 const ORDER = ["home", "hw", "prog", "lib"];
@@ -157,6 +179,14 @@ function toBot() { if (tg) { try { tg.close(); return; } catch (_) {} } if (D &&
   addEventListener("touchstart", e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, {passive: true});
   addEventListener("touchend", e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
     if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return; const i = ORDER.indexOf(PAGE) + (dx < 0 ? 1 : -1); if (i >= 0 && i < ORDER.length) show(ORDER[i]); }); })();
+(function ptr() { const ind = document.createElement("div"); ind.id = "ptr"; ind.innerHTML = "<span>↻</span>"; document.body.appendChild(ind);
+  let y0 = null, x0 = 0, dy = 0;
+  addEventListener("touchstart", e => { if (scrollY > 0) { y0 = null; return; } y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; }, {passive: true});
+  addEventListener("touchmove", e => { if (y0 === null) return; dy = Math.max(0, e.touches[0].clientY - y0); if (Math.abs(e.touches[0].clientX - x0) > dy) { dy = 0; return; }
+    const k = Math.min(1, dy / 90); ind.style.transition = "none"; ind.style.opacity = k; ind.style.transform = `translateY(${-70 + k * 80}px) rotate(${k * 300}deg)`; }, {passive: true});
+  addEventListener("touchend", async () => { if (y0 === null) return; y0 = null; ind.style.transition = "";
+    if (dy > 90) { ind.classList.add("spin"); ind.style.transform = "translateY(10px)"; haptic("medium"); await load(); ind.classList.remove("spin"); }
+    ind.style.opacity = 0; ind.style.transform = "translateY(-70px)"; dy = 0; }); })();
 setInterval(() => document.querySelectorAll("[data-cd]").forEach(el => el.textContent = until(el.dataset.cd)), 30000);
 if (!INIT) app.innerHTML = `<div class="err">🔒 Откройте кабинет кнопкой в боте — «🎓 Личный кабинет».</div>`; else load();
 </script></body></html>
