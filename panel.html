@@ -30,6 +30,7 @@
     const r = await timed("app/" + d + ".html", {cache: "force-cache"}, 20000);
     if (!r.ok) throw 0; const h = await r.text(); if (h.length < 1000 || h.indexOf("</html>") < 0) throw 0; return h;
   }
+  await new Promise(r => setTimeout(r, 0));   // дать странице дочитаться, иначе document.write допишет, а не заменит
   try {
     const cached = (() => { try { const key = Object.keys(localStorage).find(x => x.startsWith("pg-app:")); return key ? [key, localStorage.getItem(key)] : null; } catch (_) { return null; } })();
     if (cached && cached[1].length > 1000) {
