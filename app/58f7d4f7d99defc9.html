@@ -343,6 +343,14 @@ html,body{overscroll-behavior-y:none}
 #app{touch-action:pan-y pinch-zoom;min-height:calc(100vh - 70px);min-height:calc(100dvh - 70px)}
 .newscard{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--soft),rgba(142,107,216,.14));border-radius:18px;padding:12px 14px;margin-bottom:12px;cursor:pointer;animation:rise .45s var(--out) both}
 .newscard .nc-ic{font-size:22px}.newscard .n{flex:1;min-width:0}.newscard small{display:block;color:var(--hint);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.newscard .chev{color:var(--hint);font-size:20px}
+.ringbtn{cursor:pointer;transition:transform .2s var(--spring)}.ringbtn:active{transform:scale(.94)}
+.stats3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 10px}.stats3>div{background:var(--bg);border-radius:14px;padding:10px;text-align:center}
+.stats3 b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.stats3 span{font-size:12px;color:var(--hint)}
+.li.mk{gap:10px}.mkbar{height:4px;border-radius:2px;background:var(--bg2);margin-top:5px;overflow:hidden}.mkbar i{display:block;height:100%;border-radius:2px;background:linear-gradient(90deg,var(--acc),#8e6bd8);transform-origin:0 50%;animation:growx .9s var(--spring) both}
+.mkspark{width:64px;flex:none}.mkspark .spark{height:30px;margin:0}
+.mkv{text-align:right;min-width:42px}.mkv b{display:block;font-size:20px;font-variant-numeric:tabular-nums}.mkv small{font-size:12px;font-weight:700}
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.swatches button{border:0;background:var(--bg);border-radius:14px;padding:12px 4px 8px;font:inherit;font-size:12.5px;color:var(--fg);cursor:pointer}
+.swatches i{display:block;width:34px;height:34px;border-radius:50%;margin:0 auto 6px;box-shadow:0 2px 8px rgba(0,0,0,.2)}.swatches button.on{box-shadow:inset 0 0 0 2px var(--acc)}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
 /* Общие ограничения для длинных имён, адресов и узких экранов. */
 :root{--field-line:#8a9099;--field-line:color-mix(in srgb,var(--fg) 45%,var(--bg))}
@@ -629,16 +637,17 @@ let CD_T = null, NEWS = null;
 function heroHtml(d, p) {
   if (p && p.now) SKEW = dt(p.now) - Date.now();
   const nm = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.first_name : "";
-  const goal = Math.max(p ? p.best : 0, d.total + d.planned, 1);
+  const G = p && p.goal ? p.goal : 0;
+  const goal = G || Math.max(p ? p.best : 0, d.total + d.planned, 1);
   const pct = d.total / goal, rec = p && p.best && d.total > p.best;
   const now = new Date();
   return `<div class="hero"><div class="hi">${now.toLocaleDateString("ru-RU", {weekday: "long", day: "numeric", month: "long"})}</div>
     <h1>${greet(now.getHours())}${nm ? ", " + esc(nm) : ""} 👋</h1>
     <div class="hrow"><div class="hn"><div class="sub">${esc(d.month)} · заработано ${rec ? '<span class="badge-rec">🏆 рекорд</span>' : ""}</div>
       <div class="big" data-count="${d.total}" data-fmt="m">${money(d.total)}</div>
-      <div class="sub">${p && p.best ? (rec ? `лучше прошлого рекорда на ${money(d.total - p.best)}` : `до рекорда ${money(p.best - d.total)}`) : `прогноз ${money(d.total + d.planned)}`}</div>
+      <div class="sub">${G ? (d.total >= G ? `🎯 цель месяца взята! +${money(d.total - G)}` : `до цели ${money(G - d.total)} · с записанными ${money(d.total + d.planned)}`) : p && p.best ? (rec ? `лучше прошлого рекорда на ${money(d.total - p.best)}` : `до рекорда ${money(p.best - d.total)}`) : `прогноз ${money(d.total + d.planned)}`}</div>
       ${p ? spark(p.months.map(m => m.total + m.planned), "#fff") : ""}</div>
-      ${ring(pct, Math.round(pct * 100) + "%", p && p.best ? "от рекорда" : "от прогноза")}</div>
+      <div class="ringbtn" onclick="goalSet()" title="Цель месяца">${ring(pct, Math.round(pct * 100) + "%", G ? "🎯 цели" : p && p.best ? "от рекорда" : "от прогноза")}</div></div>
     ${p && p.next ? `<div class="next" onclick="${LS[p.next.id] ? `openLesson(${p.next.id})` : "go('week')"}">⏭ <div><b>${hm(p.next.start)}</b> ${esc(p.next.name)}<br><small style="opacity:.85">${dShort(p.next.start)} · ${esc(p.next.type)}</small></div>
       <span class="cd" data-cd="${p.next.start}">${untilText(p.next.start)}</span></div>` : ""}</div>`;
 }
@@ -664,6 +673,7 @@ function loadHtml(p) {
   return s + `</div><p class="hint" style="margin-top:8px">🔥 Самое загруженное время — ${WD[bw]} в ${bh}:00</p>`;
 }
 function pulseHtml(p, d) {
+  PULSE_GOAL = p.goal || 0;
   const mx = Math.max(1, ...p.top.map(x => x.sum)), medals = ["🥇", "🥈", "🥉"];
   const tips = [];
   if (d.debt) tips.push(`💸 Ученики должны ${money(d.debt)} — откройте «Кто должен» ниже и отправьте напоминания в одно касание.`);
@@ -680,7 +690,9 @@ function pulseHtml(p, d) {
   <div class="two"><div class="card"><h2>🏆 Лучшие ученики месяца</h2>${p.top.length ? p.top.map((x, i) => `<div class="lead click" data-sid="${x.id}">
       <span class="medal">${medals[i] || i + 1}</span>${ava(x.name)}<div class="n">${esc(x.name)}<small>${x.n} ${plural(x.n, "занятие", "занятия", "занятий")}</small>
       <div class="meter"><i style="width:${x.sum / mx * 100}%"></i></div></div><b>${money(x.sum)}</b></div>`).join("") : `<div class="empty">Появится после первых занятий месяца</div>`}</div>
-    <div class="card"><h2>🕑 Когда вы работаете</h2>${loadHtml(p)}</div></div>`;
+    <div class="card"><h2>🕑 Когда вы работаете</h2>${loadHtml(p)}</div></div>
+  ${p.lost && p.lost.length ? `<div class="card"><h2>👀 Давно не были · ${p.lost.length}</h2><p class="ph" style="margin:0 0 6px">Больше 3 недель без занятий и не записаны дальше — может, напомнить о себе?</p>
+    ${p.lost.map(x => `<div class="lead click" data-sid="${x.id}">${ava(x.name)}<div class="n">${esc(x.name)}<small>не был(а) ${x.days} ${plural(x.days, "день", "дня", "дней")}</small></div><span class="chev">›</span></div>`).join("")}</div>` : ""}`;
 }
 function animateHero() {
   countUp(app);
@@ -689,6 +701,61 @@ function animateHero() {
   CD_T = setInterval(() => { const el = document.querySelector("[data-cd]"); if (!el) return clearInterval(CD_T); el.textContent = untilText(el.dataset.cd); }, 30000);
 }
 
+
+// ---------- 🎯 цель месяца ----------
+async function goalSet() {
+  const cur = PULSE_GOAL || "";
+  const v = prompt("🎯 Цель на месяц (₽). Пусто — убрать цель, кольцо снова «до рекорда».", cur);
+  if (v === null) return;
+  try { toast((await post("x", {action: "goal", value: v.trim()})).note); try { localStorage.removeItem("pc:pulse"); } catch (_) {} go("home"); } catch (ex) { toast(ex.message); }
+}
+let PULSE_GOAL = 0;
+// ---------- 🧪 пробники всех учеников ----------
+let MK = {exam: ""};
+async function mocksSheet() {
+  const d = await api("mocks");
+  if (!d.items.length) return openSheet(`<div class="sh-h"><b>🧪 Пробники</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div><div class="card"><p>Пока нет ни одного пробника.</p><p class="hint">Результаты добавляются в «Задания → 🧪 Пробники и вводные» или учениками в боте.</p></div>`);
+  if (!MK.exam || !d.exams.includes(MK.exam)) MK.exam = d.exams[0];
+  const it = d.items.filter(x => x.exam === MK.exam), lasts = it.map(x => x.last);
+  const avg = Math.round(lasts.reduce((a, b) => a + b, 0) / lasts.length), grow = it.filter(x => x.growth > 0).length;
+  const mx = Math.max(...it.map(x => x.best), 1);
+  openSheet(`<div class="sh-h"><b>🧪 Пробники учеников</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
+    ${d.exams.length > 1 ? `<div class="seg">${d.exams.map(e => `<button class="${e === MK.exam ? "on" : ""}" onclick="MK.exam='${esc(e)}';mocksSheet()">${esc(e)}</button>`).join("")}</div>` : ""}
+    <div class="stats3"><div><b data-count="${it.length}">${it.length}</b><span>учеников</span></div><div><b data-count="${avg}">${avg}</b><span>средний последний</span></div><div><b class="up">${grow}</b><span>растут</span></div></div>
+    <div class="list stag">${it.map((x, i) => `<div class="li mk" onclick="openStudent(${x.sid})">${ava(x.name, 34)}<div class="t">${esc(x.name)}<small>${x.n} ${plural(x.n, "пробник", "пробника", "пробников")} · лучший ${x.best}${x.growth ? ` · рост ${x.growth > 0 ? "+" : ""}${x.growth}` : ""}</small>
+        <div class="mkbar"><i style="width:${x.last / mx * 100}%"></i></div></div>
+      <div class="mkspark">${spark(x.pts.map(p => p.v), x.growth >= 0 ? "#2e9b5f" : "#d64545")}</div>
+      <div class="mkv"><b>${x.last}</b>${x.delta ? `<small class="${x.delta > 0 ? "up" : "down"}">${x.delta > 0 ? "▲" : "▼"}${Math.abs(x.delta)}</small>` : ""}</div></div>`).join("")}</div>
+    <button class="act" style="width:100%" onclick="xExport('mocks',this)">📥 Выгрузить в Excel</button>`);
+  countUp(sheet);
+}
+// ---------- 📥 Excel ----------
+let XP = "m0";
+function excelSheet() {
+  const row = (ic, t, sub, what) => `<div class="li" onclick="xExport('${what}',this)"><span class="ic">${ic}</span><div class="t">${t}<small>${sub}</small></div><span class="chev">📥</span></div>`;
+  openSheet(`<div class="sh-h"><b>📥 Выгрузка в Excel</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
+    <p class="ph">Файл придёт вам в чат с ботом: оформленные листы, фильтры по столбцам, итоги, графики.</p>
+    <div class="seg">${Object.entries({m0: "Этот месяц", m1: "Прошлый", y: "Год", all: "Всё время"}).map(([k, t]) => `<button class="${k === XP ? "on" : ""}" onclick="XP='${k}';excelSheet()">${t}</button>`).join("")}</div>
+    <div class="list">${row("👥", "Ученики", "Все: направление, цели, занятия, последнее/следующее, долг", "students")}
+      ${row("🗓", "Занятия за период", "Дата, ученик, вид, посещение, оплата, стоимость + итог", "lessons")}
+      ${row("💰", "Деньги", "12 месяцев с графиком + кто сколько принёс за период", "money")}
+      ${row("🧪", "Пробники", "Сводка по ученикам с цветом роста + все результаты", "mocks")}</div>`);
+}
+async function xExport(what, el) {
+  if (el) el.style.opacity = .5;
+  try { toast((await post("x", {action: "export", what, period: XP})).note); } catch (ex) { toast(ex.message); }
+  finally { if (el) el.style.opacity = ""; }
+}
+// ---------- 🎨 цвет панели (на этом устройстве) ----------
+const ACCENTS = [["Telegram", ""], ["Синий", "#2f7de1"], ["Фиолетовый", "#7a3fc4"], ["Изумруд", "#14a37f"], ["Коралл", "#f0645a"], ["Янтарь", "#e08a12"], ["Розовый", "#d63b8f"], ["Графит", "#4a5568"]];
+function applyAccent(c) { const r = document.documentElement.style; if (c) { r.setProperty("--acc", c); r.setProperty("--soft", c + "22"); } else { r.removeProperty("--acc"); r.removeProperty("--soft"); } }
+try { applyAccent(localStorage.getItem("accent") || ""); } catch (_) {}
+function accentSheet() {
+  let cur = ""; try { cur = localStorage.getItem("accent") || ""; } catch (_) {}
+  openSheet(`<div class="sh-h"><b>🎨 Цвет панели</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
+    <p class="ph">Только на этом устройстве. «Telegram» — как в настройках Telegram.</p>
+    <div class="swatches">${ACCENTS.map(([n, c]) => `<button class="${c === cur ? "on" : ""}" onclick="try{localStorage.setItem('accent','${c}')}catch(_){};applyAccent('${c}');accentSheet();haptic('light')"><i style="background:${c || "var(--tg-theme-button-color,#2f7de1)"}"></i>${n}</button>`).join("")}</div>`);
+}
 // ---------- Сегодня ----------
 const LS = {};   // занятия по номеру — для карточки занятия
 function tagOf(x) {
@@ -1655,6 +1722,8 @@ async function operationsTab() { TILE_N = 0;
       ${tile('🌴', 'Отпуск', d.vacations.length ? d.vacations.map(v => esc(v.label)).join(', ') : 'Закрыть дни записи', 'vacationSheet()')}
       ${tile('📚', 'Библиотека', 'Лекции и заготовки ДЗ', 'librarySheet()')}
       ${tile('🧾', 'Журнал', jr.undo.length ? 'Есть что отменить' : 'Кто что сделал', 'journalSheet()', jr.undo.length)}
+      ${tile('🧪', 'Пробники', 'Рост учеников, графики', 'mocksSheet()')}
+      ${tile('📥', 'Excel', 'Ученики, занятия, деньги', 'excelSheet()')}
       ${tile('👨‍👩‍👧', 'Занятость близких', 'Когда свободны и заняты', 'peopleSheet()')}
       ${tile('🛠', 'Добавить функцию', 'Заявка Claude', 'ideasSheet()')}
     </div>
@@ -1664,6 +1733,7 @@ async function operationsTab() { TILE_N = 0;
       ${li('📥', 'Calendly', 'Кто записался оттуда', '', 'calendlySheet()')}
       ${li('🗑', 'Корзина', jr.trash.length ? 'Можно вернуть: ' + jr.trash.length : 'Пусто', '', 'trashSheet()')}
       ${li('📆', 'Календари, копия, обновления', 'Google, Яндекс, iCloud · резервная копия · версия бота', '', 'systemSheet()')}
+      ${li('🎨', 'Цвет панели', 'Акцентный цвет на этом устройстве', '', 'accentSheet()')}
       ${li('📲', 'Панель как приложение', 'Значок на экране телефона или компьютера', '', 'installSheet()')}
       ${li('⏱', 'Диагностика связи', 'Почему панель медленная — время каждого запроса', '', 'diagSheet()')}
       ${li('✨', 'Что нового', 'Последние обновления бота и панели', '', "(NEWS ? Promise.resolve(NEWS) : api('overview').then(o => NEWS = o.news)).then(n => newsSheet(n, true))")}
@@ -2591,6 +2661,10 @@ const FEATURES = [
   ['📥 Calendly', 'calendly кто записался', 'calendlySheet()'],
   ['💭 Что разобрать', 'пожелания что разобрать тема фото задачи', 'wishesSheet()'],
   ['📅 Расписание — ещё', 'чёт нечёт неделя лист ожидания близкие предложения', 'scheduleMore()'],
+  ['🧪 Пробники учеников', 'пробники егэ огэ баллы рост график результаты', 'mocksSheet()'],
+  ['📥 Выгрузка в Excel', 'excel эксель выгрузка таблица xlsx скачать отчёт', 'excelSheet()'],
+  ['🎨 Цвет панели', 'цвет тема оформление акцент', 'accentSheet()'],
+  ['🎯 Цель месяца', 'цель месяц план доход заработок', "go('home').then(goalSet)"],
   ['👨‍👩‍👧 Занятость близких', 'близкие семья родные занятость свободны заняты календарь', 'peopleSheet()'],
   ['📚 Библиотека', 'библиотека лекции заготовки банк раздел кабинет', 'librarySheet()'],
   ['🧪 Пробники и вводные', 'пробник егэ огэ баллы вводный тест трекер', 'teachingTools()'],
@@ -2681,7 +2755,13 @@ async function uploadGKey(button, retried) {
       <input readonly value="${esc(j.email)}" style="width:100%"><button class="act" onclick="copyPeopleLink(this.previousElementSibling)">📋 Скопировать</button></div>`, () => systemSheet()); }
   catch (ex) { toast(ex.message); button.disabled = false; }
 }
-const TABS = {home, students, week: () => week(0), hw: hwTab, money: moneyTab, tools:operationsTab};
+const TABS = {home, students, week: () => week(0), hw: hwTab, money: moneyTab, tools: async () => { await operationsTab(); verLabel(); }};
+function verLabel() {   // какая версия панели открыта — чтобы при проверке бет было понятно, свежая ли
+  const p = document.createElement("p"); p.className = "ph"; p.style.cssText = "text-align:center;margin:18px 0 0";
+  p.textContent = "Версия панели " + (PAGE_VERSION.startsWith("__") ? "—" : PAGE_VERSION);
+  fetchT("api/version", {headers: AUTH, cache: "no-store"}, 9000).then(v => { if (v.version && v.version !== PAGE_VERSION && !PAGE_VERSION.startsWith("__")) p.textContent += ` · у бота уже ${v.version} — включится при следующем открытии`; }).catch(() => {});
+  app.appendChild(p);
+}
 const TAB_ORDER = ["home", "students", "week", "hw", "money", "tools"];
 // Переключения вкладок идут по очереди: пока рисуется одна, следующая ждёт (берётся только последняя).
 // Иначе медленный ответ прежней вкладки мог дорисоваться поверх новой — экран «залипал».
@@ -2818,13 +2898,15 @@ document.addEventListener("pointerdown", e => {
   // Направление решаем по первым ~14 px: «вбок» — двигаем вкладку и НЕ даём странице прокручиваться;
   // «вверх-вниз» — обычная прокрутка, вкладку не трогаем. После свайпа нажатие под пальцем гасим.
   let x0 = null, y0 = 0, dx = 0, lock = "", killClick = 0;
-  const scrollsX = el => { for (let e = el; e && e !== app; e = e.parentElement) {
+  const scrollsX = el => { for (let e = el; e && e !== document.body; e = e.parentElement) {
       if (e.matches("input,textarea,select,.sw")) return true;
       const o = getComputedStyle(e).overflowX; if ((o === "auto" || o === "scroll") && e.scrollWidth > e.clientWidth + 2) return true; }
     return false; };
-  app.addEventListener("touchstart", e => { if (sheet.classList.contains("on") || e.touches.length > 1 || scrollsX(e.target)) { x0 = null; return; }
+  // слушаем весь документ: свайп работает с любого места, кроме панели вкладок, окон и плавающих кнопок
+  document.addEventListener("touchstart", e => { if (sheet.classList.contains("on") || e.touches.length > 1 || scrollsX(e.target)
+      || e.target.closest("nav,#sheet,#qs,.fabs,#story,#ptr,#newver")) { x0 = null; return; }
     x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; lock = ""; }, {passive: true});
-  app.addEventListener("touchmove", e => { if (x0 === null) return;
+  document.addEventListener("touchmove", e => { if (x0 === null) return;
     const mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
     if (!lock && (Math.abs(mx) > 14 || Math.abs(my) > 10)) lock = Math.abs(mx) > Math.abs(my) * 1.6 ? "x" : "y";
     if (lock === "y") { x0 = null; return; }
@@ -2839,7 +2921,7 @@ document.addEventListener("pointerdown", e => {
     if (Math.abs(dx) < 70) return;
     const i = TAB_ORDER.indexOf(tab) + (dx < 0 ? 1 : -1); if (i < 0 || i >= TAB_ORDER.length) return;
     haptic("light"); scrollTo(0, 0); go(TAB_ORDER[i]); };
-  app.addEventListener("touchend", end); app.addEventListener("touchcancel", end);
+  document.addEventListener("touchend", end); document.addEventListener("touchcancel", end);
   document.addEventListener("click", e => { if (Date.now() - killClick < 450) { e.stopPropagation(); e.preventDefault(); } }, true);
 })();
 // потянуть вниз — обновить вкладку
@@ -2865,7 +2947,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === "/") { e.preventDefault(); go("tools").then(() => { const q = document.querySelector("#app input"); if (q) q.focus(); }); }
 });
 // Версию подставляет сервер: прежняя личная ссылка получает новый интерфейс сама.
-const PAGE_VERSION = "2026.10.20-73";
+const PAGE_VERSION = "2026.10.20-76";
 let VERSION_BUSY = false;
 // Новая версия вышла, а открыта сохранённая прежняя (так панель открывается мгновенно): без перезагрузок «в цикле» —
 // просто полоска. Новая версия докачивается в фоне и включится при следующем открытии сама; кнопка — сразу.
