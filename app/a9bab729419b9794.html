@@ -265,6 +265,81 @@ mark{background:rgba(246,183,60,.45);color:inherit;border-radius:3px;padding:0 1
 #qs .qs-box{margin-top:6vh}
 #newver{position:fixed;left:12px;right:12px;top:8px;z-index:70;background:linear-gradient(135deg,var(--acc),#7a3fc4);color:#fff;border-radius:14px;padding:9px 12px;display:flex;align-items:center;gap:8px;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
 #newver button{margin-left:auto;border:0;border-radius:10px;padding:6px 12px;font:inherit;font-weight:700;background:#fff;color:#2f5fd0;cursor:pointer}#newver .x2{margin-left:0;background:rgba(255,255,255,.2);color:#fff;padding:6px 10px}
+.noanim *{animation:none!important}
+
+/* ===== 🎞 движение: пружинные окна, свайп, индикатор вкладок, отклик на нажатие, pull-to-refresh ===== */
+:root{--spring:cubic-bezier(.32,.72,0,1);--out:cubic-bezier(.2,.7,.3,1)}
+#veil{display:block!important;opacity:0;pointer-events:none;transition:opacity .35s var(--out);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)}
+#veil.on{opacity:1;pointer-events:auto;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+#sheet{transition:transform .5s var(--spring);will-change:transform;box-shadow:0 -10px 40px rgba(0,0,0,.18)}
+#sheet.drag{transition:none}
+#sheet .grab{cursor:grab;touch-action:none}
+nav{position:sticky}
+nav .pill{position:absolute;top:8px;height:calc(100% - 16px);border-radius:10px;background:var(--soft);transition:transform .45s var(--spring),width .45s var(--spring);z-index:0;pointer-events:none}
+nav button{position:relative;z-index:1}nav button.on{background:none!important}
+nav button .ni{transition:transform .35s var(--spring)}nav button.on .ni{transform:translateY(-1px) scale(1.12)}
+.act,.li,.row.click,.tile,.chip,.kpi.click,.lead.click,.fab,.okbtn,.s-open{position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent}
+.act:active,.chip:active,.okbtn:active{transform:scale(.97)}.act,.chip,.okbtn{transition:transform .18s var(--out),background .2s}
+.rip{position:absolute;border-radius:50%;pointer-events:none;background:currentColor;opacity:.16;transform:scale(0);animation:rip .55s var(--out) forwards}
+@keyframes rip{to{transform:scale(1);opacity:0}}
+#ptr{position:fixed;left:50%;top:58px;z-index:6;width:36px;height:36px;margin-left:-18px;border-radius:50%;background:var(--bg);box-shadow:0 4px 14px rgba(0,0,0,.15);
+  display:grid;place-items:center;font-size:17px;transform:translateY(-70px);opacity:0;transition:transform .3s var(--spring),opacity .2s}
+#ptr.spin span{animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+#toast{transition:opacity .25s,transform .45s var(--spring);transform:translate(-50%,24px) scale(.96);display:flex;align-items:center;gap:8px}
+#toast.on{transform:translate(-50%,0) scale(1)}
+#toast svg{flex:none}#toast svg path{stroke-dasharray:24;stroke-dashoffset:24;animation:draw .45s .1s var(--out) forwards}@keyframes draw{to{stroke-dashoffset:0}}
+.list .li,.row,.lead,.ev{animation:none}
+@media(prefers-reduced-motion:no-preference){
+  .stag>*{animation:rise .42s var(--out) both}.stag>*:nth-child(2){animation-delay:.03s}.stag>*:nth-child(3){animation-delay:.06s}
+  .stag>*:nth-child(4){animation-delay:.09s}.stag>*:nth-child(5){animation-delay:.12s}.stag>*:nth-child(6){animation-delay:.15s}.stag>*:nth-child(n+7){animation-delay:.18s}
+  .kpi b,.stat b{transition:color .3s}
+}
+@media(prefers-reduced-motion:reduce){#sheet,#veil,nav .pill,#toast{transition:none!important}.rip{display:none}}
+
+/* ---- плотные полоски действий, фильтры-карточки, формы в окнах ---- */
+.strip{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;margin:0 -2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.strip::-webkit-scrollbar{display:none}
+.strip .chip{flex:none;padding:8px 14px;font-size:14px;background:var(--bg);color:var(--fg);box-shadow:0 0 0 .5px var(--line)}
+.strip .chip.pri{background:var(--acc);color:var(--accfg);box-shadow:none;font-weight:600}.strip .chip.on{background:var(--soft);color:var(--acc)}
+.fkpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.fk{border:0;background:var(--bg);border-radius:14px;padding:10px 6px;font:inherit;color:var(--fg);cursor:pointer;text-align:center;transition:transform .2s var(--spring),box-shadow .2s}
+.fk b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.fk span{display:block;font-size:12px;color:var(--hint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fk small{display:block;font-size:11px;color:var(--bad)}.fk.on{box-shadow:inset 0 0 0 2px var(--acc);transform:translateY(-1px)}
+@media(max-width:360px){.fk b{font-size:18px}.fk span{font-size:11px}}
+#sheet label,.card label{display:block;margin:10px 0 2px;font-size:13.5px;color:var(--hint)}
+#sheet label>input:not([type=checkbox]):not([type=radio]),#sheet label>select,#sheet label>textarea,.card label>input:not([type=checkbox]),.card label>select,.card label>textarea{display:block;width:100%;margin-top:5px;color:var(--fg);font-size:15px}
+input,select,textarea{transition:border-color .2s,box-shadow .2s}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--acc);box-shadow:0 0 0 3px var(--soft)}
+select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--hint) 50%),linear-gradient(135deg,var(--hint) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 55%,calc(100% - 13px) 55%;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
+input[type=file]{padding:8px;font-size:13.5px;width:100%}
+input[type=file]::file-selector-button{border:0;border-radius:8px;padding:7px 12px;margin-right:10px;background:var(--soft);color:var(--acc);font:inherit;font-weight:600;cursor:pointer}
+#sheet pre,.card pre{background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:13px;overflow-x:auto;margin:8px 0}
+#sheet .card .card,.card .card{background:var(--bg2);box-shadow:none;padding:12px}
+.card>.act,#sheet .card>.act{display:block;width:100%;margin-top:8px}
+.card>p{margin:6px 0;line-height:1.45}
+.ptwrap{padding:10px 8px 4px}
+.ptgrid{display:grid;grid-template-columns:repeat(18,1fr);gap:2px;max-width:720px;margin:0 auto}
+.ptgap{height:4px}
+.pt{aspect-ratio:1/1.15;min-width:0;border:0;border-radius:4px;padding:0;font:inherit;font-size:clamp(7.5px,2.4vw,13px);font-weight:700;line-height:1.05;background:rgba(127,127,127,.08);color:var(--hint);opacity:.55;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.pt i{font-style:normal;font-size:clamp(5.5px,1.5vw,8.5px);font-weight:500;opacity:.8}
+.pt.has{background:var(--c);color:#1b1b1b;opacity:1;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.18);transition:transform .2s var(--spring)}
+.pt.has:hover,.pt.has:active{transform:scale(1.25);z-index:2;box-shadow:0 6px 14px rgba(0,0,0,.25)}
+@media(prefers-reduced-motion:no-preference){.pt.has{animation:pop .4s var(--out) both}}
+@media(prefers-reduced-motion:no-preference){
+  .chart .gb{transform-box:fill-box;transform-origin:50% 100%;animation:grow .8s var(--spring) both}
+  .chart text{animation:rise .5s .35s both}
+  .bar i,.lead .meter i,.dload i{transform-origin:0 50%;animation:growx .9s var(--spring) both}
+  .donut circle{animation:dash 1.1s var(--out) both}
+  .heat i{animation:pop .35s var(--out) both}
+  .sd{animation:pop .3s var(--out) both}
+}
+@keyframes grow{from{transform:scaleY(0)}}@keyframes growx{from{transform:scaleX(0)}}
+@keyframes dash{from{stroke-dasharray:0 1000}}
+.chart rect.gb:hover{filter:brightness(1.12)}
+html.locked,html.locked body{overflow:hidden;overscroll-behavior:none}
+html,body{overscroll-behavior-y:none}
+#sheet{overscroll-behavior:contain}
+#qs-res{overscroll-behavior:contain}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
 /* Общие ограничения для длинных имён, адресов и узких экранов. */
 :root{--field-line:#8a9099;--field-line:color-mix(in srgb,var(--fg) 45%,var(--bg))}
@@ -325,7 +400,8 @@ input:not([type=checkbox]):not([type=radio]),select{min-height:44px}
 let tg = window.Telegram && Telegram.WebApp && Telegram.WebApp.initData ? Telegram.WebApp : null;
 const INIT = tg ? tg.initData : (() => { try { return new URLSearchParams(location.hash.slice(1)).get("tgWebAppData") || ""; } catch (_) { return ""; } })();
 window.tgLoaded = () => { const w = window.Telegram && Telegram.WebApp; if (!w || tg || !INIT) return; tg = w;
-  try { tg.ready(); tg.expand(); tg.setHeaderColor("bg_color"); } catch (_) {} };
+  try { tg.ready(); tg.expand(); tg.setHeaderColor("bg_color"); } catch (_) {}
+  try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (_) {} };
 let KEY = new URLSearchParams(location.search).get("k") || "";
 // 📲 отдельное приложение: ключ запоминается, чтобы ярлык на экране телефона/компьютера открывал панель без бота
 const KEY_STORE = "pk:" + new URL(".", document.baseURI).href;
@@ -360,7 +436,7 @@ function installSheet() {
     <p class="ph">Если ссылка попала не туда — в боте ⚙️ → 🖥 Веб-панель → «🔐 Сменить ключ личных ссылок» отключит старые ссылки. Обычный перезапуск их сохраняет.</p>`);
 }   // кнопка в меню внизу (без подписи Telegram)
 const AUTH = {"X-Init-Data": INIT, "X-Panel-Key": KEY, "tuna-skip-browser-warning": "1"};
-if (tg) { tg.ready(); tg.expand(); try { tg.setHeaderColor("bg_color"); } catch (_) {} }
+if (tg) { tg.ready(); tg.expand(); try { tg.setHeaderColor("bg_color"); } catch (_) {} try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (_) {} }
 const app = document.getElementById("app");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let CUR = "₽";
@@ -403,14 +479,14 @@ async function fetchT(url, opt, ms) {   // таймаут охватывает �
     finally { clearTimeout(t); }
   }
 }
-let USE_CACHE = false; const STALE = new Map();   // что показано из памяти: адрес → текст кэша
+let USE_CACHE = false; const STALE = new Map(), FRESH = {};   // FRESH: когда данные получены в этой сессии   // что показано из памяти: адрес → текст кэша
 const pcKey = (what, q) => "pc:" + what + q;
 async function api(what, q = "") {
   const key = pcKey(what, q);
   if (USE_CACHE) { try { const c = localStorage.getItem(key); if (c) { STALE.set(key, c); const j = JSON.parse(c); CUR = j.cur || CUR; return j; } } catch (_) {} }
   const j = await fetchT(`api/${what}${q}`, {headers: AUTH, cache: "no-store"}, 9000);
   CUR = j.cur || CUR;
-  if (!what.startsWith("search") && !what.startsWith("news")) { try { localStorage.setItem(key, JSON.stringify(j)); } catch (_) {} }
+  if (!what.startsWith("search") && !what.startsWith("news")) { try { localStorage.setItem(key, JSON.stringify(j)); FRESH[key] = Date.now(); } catch (_) {} }
   return j;
 }
 function fail(ex) {
@@ -431,7 +507,7 @@ function ava(name, size) {
   return `<span class="ava" style="background:linear-gradient(135deg,${c1},${c2})${size ? `;width:${size}px;height:${size}px` : ""}">${esc(t)}</span>`;
 }
 function countUp(root) {
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches || app.classList.contains("noanim");
   (root || document).querySelectorAll("[data-count]").forEach(el => {
     const to = +el.dataset.count, fmt = el.dataset.fmt === "m" ? money : v => Math.round(v).toLocaleString("ru-RU");
     if (reduce || !to) { el.textContent = fmt(to); return; }
@@ -552,7 +628,6 @@ function heroHtml(d, p) {
       <div class="sub">${p && p.best ? (rec ? `лучше прошлого рекорда на ${money(d.total - p.best)}` : `до рекорда ${money(p.best - d.total)}`) : `прогноз ${money(d.total + d.planned)}`}</div>
       ${p ? spark(p.months.map(m => m.total + m.planned), "#fff") : ""}</div>
       ${ring(pct, Math.round(pct * 100) + "%", p && p.best ? "от рекорда" : "от прогноза")}</div>
-    ${p ? `<button class="s-open" onclick="openStory()">🎬 Итоги месяца</button>` : ""}
     ${p && p.next ? `<div class="next" onclick="${LS[p.next.id] ? `openLesson(${p.next.id})` : "go('week')"}">⏭ <div><b>${hm(p.next.start)}</b> ${esc(p.next.name)}<br><small style="opacity:.85">${dShort(p.next.start)} · ${esc(p.next.type)}</small></div>
       <span class="cd" data-cd="${p.next.start}">${untilText(p.next.start)}</span></div>` : ""}</div>`;
 }
@@ -625,7 +700,7 @@ async function home(dIn, pIn) {
   const pP = pIn !== undefined ? Promise.resolve(pIn) : api("pulse").catch(() => null);
   const d = dIn || await api("overview");
   const p = pIn !== undefined ? pIn : await Promise.race([pP, new Promise(r => setTimeout(() => r(undefined), 1500))]);
-  if (p === undefined) pP.then(p2 => { if (p2 && tab === "home" && !document.getElementById("sheet").classList.contains("on")) home(d, p2); });
+  if (p === undefined) pP.then(p2 => { if (p2 && tab === "home" && !document.getElementById("sheet").classList.contains("on")) { app.classList.add("noanim"); home(d, p2); setTimeout(() => app.classList.remove("noanim"), 600); } });
   MANUAL = d.manual;
   const hrs = Math.round(d.minutes / 6) / 10;
   const today = d.today.filter(x => x.kind === "lesson" || x.kind === "group");
@@ -660,27 +735,26 @@ async function home(dIn, pIn) {
 // ---------- Ученики ----------
 const COLS = [["name","Ученик"],["cat","Направление"],["done","Занятий","num"],["last","Последнее"],
               ["next","Следующее"],["month","За месяц","num"],["debt","Долг","num"]];
-let S = {items: [], cats: [], sort: "name", asc: true, q: "", cat: "", open: 0, archived: false};
+let S = {items: [], cats: [], sort: "name", asc: true, q: "", cat: "", open: 0, archived: false, f: ""};
 async function students() {
   const d = await api("students", S.archived ? "?archived=1" : ""); S.items = d.items; S.cats = d.cats;
-  app.innerHTML = `<div class="acts"><button class="act pri" onclick="peopleTools('invite')">➕ Добавить / пригласить</button>
-    <button class="act" onclick="peopleTools('categories')">🏷 Направления</button>
-    <button class="act" onclick="peopleTools('no_next')">🙋 Без записи</button><button class="act" onclick="peopleTools('reviews')">⭐ Отзывы</button>
-    <button class="act" onclick="S.archived=!S.archived;S.cat='';students()">${S.archived ? 'Активные ученики' : '🗄 Архив'}</button></div>
-    ${S.archived ? "" : `<div class="kpis" style="margin-bottom:12px"><div class="kpi"><span>Всего</span><b data-count="${S.items.length}">${S.items.length}</b><span>${plural(S.items.length, "ученик", "ученика", "учеников")}</span></div>
-      <div class="kpi"><span>Записаны дальше</span><b class="up">${S.items.filter(x => x.next).length}</b><span>есть следующее занятие</span></div>
-      <div class="kpi click" onclick="peopleTools('no_next')"><span>Без записи</span><b class="${S.items.some(x => !x.next) ? "down" : ""}">${S.items.filter(x => !x.next).length}</b><span>напомнить записаться ›</span></div>
-      <div class="kpi"><span>Должны</span><b class="${S.items.some(x => x.debt) ? "down" : ""}">${S.items.filter(x => x.debt).length}</b><span>${money(S.items.reduce((a, x) => a + (x.debt || 0), 0))}</span></div></div>`}<div class="card">
-    <div class="tools"><input id="q" placeholder="🔎 Имя, @ник, заметка…" value="${esc(S.q)}">
-      <select id="sort">${COLS.map(([k,t]) => `<option value="${k}"${k === S.sort ? " selected" : ""}>↕ ${t}</option>`).join("")}</select>
-</div>
-    ${S.cats.length ? `<div class="chips" style="margin-bottom:8px"><button class="chip${!S.cat ? " on" : ""}" data-cat="">Все</button>${S.cats.filter(c => S.items.some(x => x.cat === c)).map(c =>
+  const F = [["", "Все", S.items.length, ""], ["next", "Записаны", S.items.filter(x => x.next).length, "up"],
+             ["nonext", "Без записи", S.items.filter(x => !x.next).length, "down"], ["debt", "Должны", S.items.filter(x => x.debt).length, "down"]];
+  app.innerHTML = `<div class="strip"><button class="chip pri" onclick="peopleTools('invite')">➕ Пригласить</button>
+    <button class="chip" onclick="peopleTools('categories')">🏷 Направления</button><button class="chip" onclick="peopleTools('reviews')">⭐ Отзывы</button>
+    <button class="chip" onclick="peopleTools('no_next')">📨 Напомнить записаться</button>
+    <button class="chip${S.archived ? " on" : ""}" onclick="S.archived=!S.archived;S.cat='';S.f='';students()">🗄 ${S.archived ? 'Архив ✓' : 'Архив'}</button></div>
+    ${S.archived ? "" : `<div class="fkpis">${F.map(([k, t, n, c]) => `<button class="fk${(S.f || "") === k ? " on" : ""}" data-f="${k}"><b class="${n && c ? c : ""}" data-count="${n}">${n}</b><span>${t}</span>${k === "debt" && n ? `<small>${money(S.items.reduce((a, x) => a + (x.debt || 0), 0))}</small>` : ""}</button>`).join("")}</div>`}
+    <div class="card">
+    <div class="tools"><input id="q" placeholder="🔎 Имя, @ник, заметка, цели…" value="${esc(S.q)}" style="width:100%"></div>
+    ${S.cats.length ? `<div class="chips" style="margin-bottom:8px"><button class="chip${!S.cat ? " on" : ""}" data-cat="">Все направления</button>${S.cats.filter(c => S.items.some(x => x.cat === c)).map(c =>
       `<button class="chip${c === S.cat ? " on" : ""}" data-cat="${esc(c)}">${esc(c)} · ${S.items.filter(x => x.cat === c).length}</button>`).join("")}</div>` : ""}
     <div class="tbl"><table><thead><tr>${COLS.map(([k,t,c]) => `<th data-k="${k}" class="${c || ""}">${t}</th>`).join("")}</tr></thead>
     <tbody id="tb"></tbody></table></div><div class="slist" id="sl"></div><div id="sum" class="empty"></div></div>`;
+  document.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { S.f = b.dataset.f; haptic("light");
+    document.querySelectorAll("[data-f]").forEach(x => x.classList.toggle("on", x.dataset.f === S.f)); drawStudents(); });
   countUp(app);
   document.getElementById("q").oninput = e => { S.q = e.target.value; drawStudents(); };
-  document.getElementById("sort").onchange = e => { S.sort = e.target.value; S.asc = !["done","month","debt","last"].includes(S.sort); drawStudents(); };
   document.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { S.cat = b.dataset.cat;
     document.querySelectorAll("[data-cat]").forEach(x => x.classList.toggle("on", x.dataset.cat === S.cat)); drawStudents(); });
   document.querySelectorAll("th").forEach(th => th.onclick = () => {
@@ -690,6 +764,7 @@ async function students() {
 function drawStudents() {
   const q = S.q.trim().toLowerCase();
   let rows = S.items.filter(x => (!S.cat || x.cat === S.cat) &&
+    (!S.f || (S.f === "next" ? x.next : S.f === "nonext" ? !x.next : S.f === "debt" ? x.debt : true)) &&
     (!q || [x.name, x.user, x.notes, x.goals, x.level].join(" ").toLowerCase().includes(q)));
   const k = S.sort, m = S.asc ? 1 : -1;
   rows.sort((a, b) => {
@@ -843,7 +918,7 @@ function chart(ms) {
     <linearGradient id="cgb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6b73c"/><stop offset="1" stop-color="#f08a24"/></linearGradient></defs>`;
   ms.forEach((m, i) => {
     const x = P + i * bw + bw * .15, w = bw * .7, h1 = (m.total / mx) * (H - 50), h2 = (m.planned / mx) * (H - 50);
-    s += `<rect x="${x}" y="${H - 22 - h1}" width="${w}" height="${h1}" rx="5" fill="url(#${m.total === best && best ? "cgb" : "cg"})"><title>${m.label}: ${money(m.total)} (${m.cnt})</title></rect>`;
+    s += `<rect x="${x}" y="${H - 22 - h1}" width="${w}" height="${h1}" rx="5" class="gb" style="animation-delay:${i * 45}ms" fill="url(#${m.total === best && best ? "cgb" : "cg"})"><title>${m.label}: ${money(m.total)} (${m.cnt})</title></rect>`;
     if (h2) s += `<rect x="${x}" y="${H - 22 - h1 - h2}" width="${w}" height="${h2}" rx="4" fill="var(--acc)" opacity=".3"><title>запланировано ${money(m.planned)}</title></rect>`;
     s += `<text x="${x + w / 2}" y="${H - 6}" text-anchor="middle">${m.label}</text>`;
     if (m.total) s += `<text x="${x + w / 2}" y="${H - 28 - h1 - h2}" text-anchor="middle">${m.total === best ? "🏆 " : ""}${Math.round(m.total / 1000)}к</text>`;
@@ -957,18 +1032,24 @@ let SHEET_BACK = null;              // что открыть по «назад»
 function openSheet(html, back = null) {
   SHEET_BACK = back;
   sheet.innerHTML = `<div class="grab"></div>` + html; sheet.scrollTop = 0;
-  veil.style.display = "block"; requestAnimationFrame(() => sheet.classList.add("on"));
+  sheet.style.transform = ""; veil.classList.add("on"); requestAnimationFrame(() => sheet.classList.add("on"));
+  document.documentElement.classList.add("locked");
+  const lst = sheet.querySelector(".list"); if (lst) lst.classList.add("stag");
+  haptic("light");
   if (tg && tg.BackButton) { tg.BackButton.show(); }
 }
 function closeSheet() {
   if (SHEET_BACK) { const f = SHEET_BACK; SHEET_BACK = null; return f(); }
-  sheet.classList.remove("on"); veil.style.display = "none";
+  sheet.classList.remove("on"); veil.classList.remove("on"); sheet.style.transform = "";
+  document.documentElement.classList.remove("locked");
   if (tg && tg.BackButton) tg.BackButton.hide();
 }
 veil.onclick = () => { SHEET_BACK = null; closeSheet(); };
 if (tg && tg.BackButton) tg.BackButton.onClick(closeSheet);
 let toastT = 0;
-function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.classList.add("on");
+function toast(t) { const el = document.getElementById("toast"); const ok = /^(✅|Готово|Сохранено)/.test(String(t));
+  el.innerHTML = (ok ? `<svg width="18" height="18" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>` : "") + `<span>${esc(String(t).replace(/^✅\s*/, ok ? "" : "✅ "))}</span>`;
+  el.classList.remove("on"); void el.offsetWidth; el.classList.add("on"); if (ok) haptic("success");
   clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on"), 2600); }
 function confirmAsk(text) {
   return new Promise(res => (tg && tg.showConfirm) ? tg.showConfirm(text, ok => res(!!ok)) : res(confirm(text)));
@@ -1015,7 +1096,7 @@ function askPin() {
     document.getElementById("pin-ok").onclick = done; inp.onkeydown = e => { if (e.key === "Enter") done(); };
   });
 }
-function closeSheetRaw() { SHEET_BACK = null; sheet.classList.remove("on"); veil.style.display = "none"; }
+function closeSheetRaw() { SHEET_BACK = null; sheet.classList.remove("on"); veil.classList.remove("on"); sheet.style.transform = ""; document.documentElement.classList.remove("locked"); }
 async function mark(id, what, ask) {
   if (ask && !(await confirmAsk(ask))) return;
   document.querySelectorAll("#sheet .act").forEach(b => b.disabled = true);
@@ -2214,10 +2295,20 @@ async function librarySheet(keep) {
     <button class="act pri" style="width:100%;margin:8px 0" onclick="libNew('${LIB_KIND}','')">➕ ${LIB_KIND === 'lec' ? 'Новая лекция' : 'Новое задание'}</button>
     ${K.sections.map(s => { const open = LIB_OPEN === s.code;
       return `<div class="list"><div class="li" onclick="LIB_OPEN=LIB_OPEN==='${s.code}'?'':'${s.code}';librarySheet(true)"><div class="t">${esc(s.name)}<small>${s.items.length} · ${s.shared.length ? '👁 открыт ' + s.shared.length + ' уч.' : 'в кабинете не открыт'}</small></div><span class="chev">${open ? '⌄' : '›'}</span></div>
-      ${open ? libGroups(s).join('') + `<div class="ed"><div class="acts"><button class="act" onclick="libNew('${LIB_KIND}','${s.code}')">➕ Сюда</button><button class="act" onclick="libShareSection('${s.code}')">👁 Кабинет</button>
+      ${open ? (s.items.filter(x => x.z).length >= 5 && LIB_VIEW !== 'list' ? ptable(s) : libGroups(s).join('')) + `<div class="ed"><div class="acts"><button class="act" onclick="libNew('${LIB_KIND}','${s.code}')">➕ Сюда</button><button class="act" onclick="libShareSection('${s.code}')">👁 Кабинет</button>${s.items.filter(x => x.z).length >= 5 ? `<button class="act" onclick="LIB_VIEW=LIB_VIEW==='list'?'table':'list';librarySheet(true)">${LIB_VIEW === 'list' ? '🧪 Таблицей' : '📋 Списком'}</button>` : ''}
         ${s.custom ? `<button class="act" onclick="libRenameSection('${s.code}')">✏️ Имя</button>${s.items.length ? '' : `<button class="act bad" onclick="libPost({action:'section-delete',kind:'${LIB_KIND}',section:'${s.code}'},this,'Удалить пустой раздел?')">🗑</button>`}` : ''}</div></div>` : ''}</div>`; }).join('')}
     ${LIB_KIND === 'lec' ? `<div class="card"><div class="row2" style="display:flex;gap:8px"><input id="lib-sec" placeholder="Новый раздел, например «Физхимия»" style="flex:1;min-width:0"><button class="okbtn" onclick="libPost({action:'section-add',kind:'lec',name:val('lib-sec')})">＋</button></div></div>` : ''}`);
   sheet.scrollTop = y;
+}
+let LIB_VIEW = 'table';
+function ptable(s) {   // раздел, где лекции названы «1. Водород…», — таблицей Менделеева
+  const by = {}; s.items.forEach(x => { if (x.z) by[x.z] = x; });
+  const cells = LIB.pt.map(([z, sym, r, c, cat]) => { const x = by[z], row = r;
+    return `<button class="pt${x ? ' has' : ''}" style="grid-row:${row};grid-column:${c};${x ? `--c:${LIB.ptc[cat] || '#ccc'}` : ''}" ${x ? `onclick="libItem(${x.id})" title="${esc(x.title)}"` : 'disabled'}><i>${z}</i>${sym}</button>`; }).join('');
+  const rest = s.items.filter(x => !x.z);
+  return `<div class="ptwrap"><div class="ptgrid">${cells}<div class="ptgap" style="grid-row:8;grid-column:1/-1"></div></div></div>
+    <p class="ph" style="margin:6px 14px">Цветные клетки — есть лекция (${Object.keys(by).length} из 118). Нажмите на элемент. <a href="#" onclick="LIB_VIEW='list';librarySheet(true);return false">Списком</a></p>
+    ${rest.length ? libGroups({items: rest}).join('') : ''}`;
 }
 function libGroups(s) {
   const by = {};
@@ -2568,23 +2659,30 @@ async function uploadGKey(button, retried) {
   catch (ex) { toast(ex.message); button.disabled = false; }
 }
 const TABS = {home, students, week: () => week(0), hw: hwTab, money: moneyTab, tools:operationsTab};
+const TAB_ORDER = ["home", "students", "week", "hw", "money", "tools"];
 async function go(t) {
-  tab = t;
+  const dir = Math.sign(TAB_ORDER.indexOf(t) - TAB_ORDER.indexOf(tab)) || 0;
+  tab = t; requestAnimationFrame(movePill);
+  if (dir && !REDUCE.matches) app.animate([{opacity: .0, transform: `translateX(${dir * 22}px)`}, {opacity: 1, transform: "none"}], {duration: 320, easing: "cubic-bezier(.2,.7,.3,1)"});
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
   // Мгновенно: показать то, что было в прошлый раз (из памяти), и тихо обновить свежими данными
-  let shown = false; STALE.clear(); USE_CACHE = true;
-  try { await TABS[t](); shown = STALE.size > 0; } catch (_) { shown = false; } finally { USE_CACHE = false; }
-  if (!shown) { app.innerHTML = skeleton(); try { await TABS[t](); } catch (ex) { fail(ex); } }
-  else {
+  // заглушка не мелькает: из памяти экран рисуется в том же кадре
+  let ok = true; STALE.clear(); USE_CACHE = true; app.innerHTML = skeleton();
+  try { await TABS[t](); } catch (ex) { ok = false; USE_CACHE = false; if (STALE.size) { try { await TABS[t](); ok = true; } catch (e2) { fail(e2); } } else fail(ex); } finally { USE_CACHE = false; }
+  if (ok && STALE.size) {
     const mine = t, old = new Map(STALE);
     try {
       let changed = false;
       for (const [key, txt] of old) {
+        if (Date.now() - (FRESH[key] || 0) < 45000) continue;   // только что обновляли — не дёргаем экран
         const w = key.slice(3); let fresh; try { fresh = JSON.stringify(await fetchT("api/" + w, {headers: AUTH, cache: "no-store"}, 9000)); } catch (_) { continue; }
-        if (fresh !== txt) { changed = true; try { localStorage.setItem(key, fresh); } catch (_) {} }
+        // сравниваем без «служебных» полей (текущее время, подписанные ссылки на файлы и т. п.)
+        const norm = t => { try { return JSON.stringify(JSON.parse(t), (k, v) => /^(now|hour|cur|url|src|thumb|seen|news)$/.test(k) ? undefined : v); } catch (_) { return t; } };
+        try { localStorage.setItem(key, fresh); FRESH[key] = Date.now(); } catch (_) {}
+        if (norm(fresh) !== norm(txt)) changed = true;
       }
       const busy = document.getElementById("sheet").classList.contains("on") || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "");
-      if (changed && tab === mine && !busy) { const y = scrollY; await TABS[t](); scrollTo(0, y); }
+      if (changed && tab === mine && !busy) { const y = scrollY; app.classList.add("noanim"); await TABS[t](); scrollTo(0, y); setTimeout(() => app.classList.remove("noanim"), 600); }
     } catch (_) {}
   }
   if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
@@ -2641,6 +2739,73 @@ const _n = s => String(s || "").toLowerCase().replace(/ё/g, "е");
   document.body.appendChild(f);
   document.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); quickSearch(); } });
 })();
+
+// ---------- 🎞 движение и жесты ----------
+function haptic(k) { try { if (!tg || !tg.HapticFeedback) return; if (k === "success" || k === "error" || k === "warning") tg.HapticFeedback.notificationOccurred(k); else tg.HapticFeedback.impactOccurred(k); } catch (_) {} }
+const REDUCE = matchMedia("(prefers-reduced-motion: reduce)");
+// индикатор активной вкладки — «пилюля», которая переезжает
+function movePill() {
+  const nav = document.getElementById("tabs"), on = nav && nav.querySelector("button.on"); if (!on) return;
+  let p = nav.querySelector(".pill"); if (!p) { p = document.createElement("span"); p.className = "pill"; nav.prepend(p); }
+  p.style.width = on.offsetWidth + "px"; p.style.transform = `translateX(${on.offsetLeft}px)`;
+}
+addEventListener("resize", movePill);
+// волна от пальца
+document.addEventListener("pointerdown", e => {
+  const el = e.target.closest(".act,.li,.row.click,.tile,.chip,.kpi.click,.lead.click,.fab,.okbtn,.s-open"); if (!el || REDUCE.matches || el.disabled) return;
+  const r = el.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2.2, s = document.createElement("span");
+  s.className = "rip"; s.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`;
+  el.appendChild(s); setTimeout(() => s.remove(), 600);
+  if (el.matches(".act,.tile,.fab")) haptic("light");
+}, {passive: true});
+// свайп вниз закрывает окно
+(function sheetSwipe() {
+  // смахнуть окно вниз: тянется за пальцем (с «резинкой»), закрывается по расстоянию или по быстрому движению
+  let y0 = null, dy = 0, t0 = 0, last = 0, lastT = 0, v = 0;
+  sheet.addEventListener("touchstart", e => { if (sheet.scrollTop > 2 && !e.target.closest(".grab,.sh-h")) { y0 = null; return; }
+    y0 = e.touches[0].clientY; dy = 0; v = 0; t0 = lastT = performance.now(); last = y0; }, {passive: true});
+  sheet.addEventListener("touchmove", e => { if (y0 === null) return; const y = e.touches[0].clientY, now = performance.now();
+    dy = y - y0; v = (y - last) / Math.max(1, now - lastT); last = y; lastT = now;
+    if (dy <= 0) { if (sheet.classList.contains("drag")) { sheet.classList.remove("drag"); sheet.style.transform = ""; } return; }
+    if (sheet.scrollTop > 2) return;
+    sheet.classList.add("drag"); sheet.style.transform = `translateY(${dy < 60 ? dy : 60 + (dy - 60) * .85}px)`;
+    veil.style.opacity = String(Math.max(.15, 1 - dy / 420)); }, {passive: true});
+  sheet.addEventListener("touchend", () => { if (y0 === null) return; y0 = null; sheet.classList.remove("drag"); veil.style.opacity = "";
+    if (dy > 130 || (dy > 30 && v > .65)) { haptic("light"); sheet.style.transform = "translateY(105%)"; setTimeout(() => { SHEET_BACK = null; closeSheet(); }, 180); }
+    else sheet.style.transform = ""; });
+})();
+// свайп влево/вправо — соседняя вкладка
+(function tabSwipe() {
+  let x0 = null, y0 = 0, dx = 0, lock = "";
+  const skip = el => el.closest(".strip,.chips,.tbl,.heat,.hwrap,.seg,.loadm,.sdots,input,textarea,select,.qs-box,#story,.sw");
+  app.addEventListener("touchstart", e => { if (sheet.classList.contains("on") || skip(e.target)) { x0 = null; return; }
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; lock = ""; }, {passive: true});
+  app.addEventListener("touchmove", e => { if (x0 === null) return;
+    const mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+    if (!lock && (Math.abs(mx) > 12 || Math.abs(my) > 12)) lock = Math.abs(mx) > Math.abs(my) * 1.4 ? "x" : "y";
+    if (lock !== "x") return; dx = mx;
+    const i = TAB_ORDER.indexOf(tab), edge = (dx > 0 && i === 0) || (dx < 0 && i === TAB_ORDER.length - 1);
+    app.style.transition = "none"; app.style.transform = `translateX(${dx * (edge ? .12 : .35)}px)`; app.style.opacity = String(1 - Math.min(.35, Math.abs(dx) / 900)); }, {passive: true});
+  app.addEventListener("touchend", () => { if (x0 === null) return; x0 = null;
+    app.style.transition = "transform .35s var(--spring),opacity .3s"; app.style.transform = ""; app.style.opacity = "";
+    if (lock !== "x" || Math.abs(dx) < 70) return;
+    const i = TAB_ORDER.indexOf(tab) + (dx < 0 ? 1 : -1); if (i < 0 || i >= TAB_ORDER.length) return;
+    haptic("light"); go(TAB_ORDER[i]); });
+})();
+// потянуть вниз — обновить вкладку
+(function pullToRefresh() {
+  const ind = document.createElement("div"); ind.id = "ptr"; ind.innerHTML = "<span>↻</span>"; document.body.appendChild(ind);
+  let y0 = null, dy = 0, busy = false;
+  addEventListener("touchstart", e => { if (scrollY > 0 || busy || sheet.classList.contains("on") || document.getElementById("qs")?.style.display === "block") { y0 = null; return; } y0 = e.touches[0].clientY; window.__ptrX = e.touches[0].clientX; }, {passive: true});
+  addEventListener("touchmove", e => { if (y0 === null) return; dy = Math.max(0, e.touches[0].clientY - y0); if (!dy) return;
+    if (Math.abs(e.touches[0].clientX - (window.__ptrX ?? e.touches[0].clientX)) > dy) { dy = 0; return; }
+    const k = Math.min(1, dy / 90); ind.style.transition = "none"; ind.style.opacity = k; ind.style.transform = `translateY(${-70 + k * 80}px) rotate(${k * 300}deg)`; }, {passive: true});
+  addEventListener("touchend", async () => { if (y0 === null) return; y0 = null; ind.style.transition = "";
+    if (dy > 90) { busy = true; haptic("medium"); ind.classList.add("spin"); ind.style.transform = "translateY(10px)";
+      try { Object.keys(localStorage).filter(k => k.startsWith("pc:")).forEach(k => localStorage.removeItem(k)); } catch (_) {}
+      await go(tab); ind.classList.remove("spin"); busy = false; }
+    ind.style.opacity = 0; ind.style.transform = "translateY(-70px)"; dy = 0; });
+})();
 // ⌨️ на компьютере: 1–6 — вкладки, «/» — поиск по функциям, Esc — закрыть окно
 document.addEventListener("keydown", e => {
   if (e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test((e.target.tagName || ""))) return;
@@ -2650,7 +2815,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === "/") { e.preventDefault(); go("tools").then(() => { const q = document.querySelector("#app input"); if (q) q.focus(); }); }
 });
 // Версию подставляет сервер: прежняя личная ссылка получает новый интерфейс сама.
-const PAGE_VERSION = "2026.10.20-64";
+const PAGE_VERSION = "2026.10.20-67";
 let VERSION_BUSY = false;
 // Новая версия вышла, а открыта сохранённая прежняя (так панель открывается мгновенно): без перезагрузок «в цикле» —
 // просто полоска. Новая версия докачивается в фоне и включится при следующем открытии сама; кнопка — сразу.
