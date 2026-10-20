@@ -93,7 +93,7 @@ tr.more td{white-space:normal;background:var(--bg2);color:var(--fg);font-size:14
 nav button{font-size:13.5px}
 .click{cursor:pointer}.click:active{opacity:.6}
 #veil{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20;display:none}
-#sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-height:92vh;overflow-y:auto;background:var(--bg2);
+#sheet{overflow-x:hidden;overscroll-behavior-x:none;touch-action:pan-y;position:fixed;left:0;right:0;bottom:0;z-index:21;max-height:92vh;overflow-y:auto;background:var(--bg2);
   border-radius:16px 16px 0 0;padding:14px 12px 28px;transform:translateY(105%);transition:transform .22s ease;
   max-width:760px;margin:0 auto;-webkit-overflow-scrolling:touch}
 #sheet.on{transform:none}
@@ -115,15 +115,18 @@ nav button{font-size:13.5px}
   padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
 #toast.on{opacity:1}
 .pre{white-space:pre-wrap}
-.ans img{width:100%;border-radius:10px;margin-top:8px;display:block;background:var(--bg2);min-height:60px}
+.ans{overflow:hidden;min-width:0}.ans img{width:100%;max-width:100%;height:auto;object-fit:contain;border-radius:10px;margin-top:8px;display:block;background:var(--bg2);min-height:60px}
 #imgv{position:fixed;inset:0;background:#000;z-index:40;display:none;overflow:auto;-webkit-overflow-scrolling:touch}
-#imgv img{width:100%;display:block;touch-action:pinch-zoom}
+#imgv img{width:100%;max-width:100%;height:auto;display:block;touch-action:pan-y pinch-zoom}
 #imgv .x{position:fixed;top:12px;right:12px;background:rgba(255,255,255,.2);color:#fff}
 .grades{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:8px 0}
 textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-height:80px;resize:vertical}
 .ef{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
 .ef:first-child{border-top:0}.ef span{color:var(--hint)}.ef b{font-weight:500;text-align:right}
 .ev.free{border-left:3px dashed var(--ok);background:rgba(46,155,95,.07);color:var(--ok)}
+.seg{display:flex;gap:4px;padding:3px;border-radius:14px;background:var(--bg2);margin:8px 0}.seg button{flex:1;border:0;border-radius:11px;padding:9px 6px;background:transparent;color:var(--fg);font:inherit;font-size:14px;transition:background .2s,transform .15s}.seg button.on{background:var(--acc);color:var(--accfg);font-weight:600}.seg button:active{transform:scale(.97)}
+.dayrail{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin:0 -2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.dayrail::-webkit-scrollbar{display:none}
+.dchip{position:relative;flex:0 0 46px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 0;border-radius:14px;border:1px solid var(--line);background:transparent;color:var(--fg);font:inherit}.dchip small{font-size:11px;opacity:.7}.dchip b{font-size:16px}.dchip.on{background:var(--acc);color:var(--accfg);border-color:transparent}.dchip i{position:absolute;top:4px;right:6px;width:7px;height:7px;border-radius:50%;background:#22c55e}
 .hwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .hgrid{position:relative;display:grid;grid-template-columns:repeat(7,minmax(108px,1fr));gap:4px;padding-left:38px;min-width:800px}
 .hcol .hh{height:30px;font-size:13px;font-weight:600;text-align:center;line-height:30px}
@@ -355,6 +358,7 @@ html,body{overscroll-behavior-y:none}
 #pvw{position:fixed;inset:0;z-index:65;background:rgba(10,10,14,.0);display:flex;flex-direction:column;align-items:center;pointer-events:none;transition:background .35s}
 #pvw.on{background:rgba(10,10,14,.78);pointer-events:auto;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .pvbar{width:100%;max-width:440px;display:flex;align-items:center;gap:10px;padding:10px 14px;color:#fff;font-weight:600;font-size:14px;transform:translateY(-30px);opacity:0;transition:all .45s var(--spring)}
+.pvbar .seg{background:rgba(255,255,255,.2)}.pvbar .seg button{background:transparent;color:#fff;padding:6px 10px;font-weight:600}.pvbar .seg button.on{background:#fff;color:#111}
 .pvbar span{flex:1}.pvbar button{border:0;border-radius:12px;padding:8px 14px;background:#fff;color:#111;font:inherit;font-weight:700;cursor:pointer}
 .pvphone{flex:1;width:calc(100% - 20px);max-width:420px;margin-bottom:12px;border-radius:28px;overflow:hidden;background:#000;box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 0 6px #1b1d22;transform:translateY(40px) scale(.96);opacity:0;transition:all .55s var(--spring)}
 #pvw.on .pvbar,#pvw.on .pvphone{transform:none;opacity:1}
@@ -795,24 +799,29 @@ function accentSheet() {
 }
 
 // ---------- 👁 глазами ученика: его кабинет-приложение внутри панели (только просмотр) ----------
-function meUrl(sid) {
+function meUrl(sid, role) {
   const base = new URL(".", document.baseURI).href;
   const pages = /github\.io$/.test(location.hostname);
   const u = pages ? location.origin + "/tutor-table/me.html?u=" + encodeURIComponent(base) : base + "me?";
-  return u + (pages ? "&" : "") + "as=" + sid + (KEY ? "&k=" + encodeURIComponent(KEY) : "") + (INIT ? "#tgWebAppData=" + encodeURIComponent(INIT) : "");
+  return u + (pages ? "&" : "") + "as=" + sid + (role === "parent" ? "&role=parent" : "") + (KEY ? "&k=" + encodeURIComponent(KEY) : "") + (INIT ? "#tgWebAppData=" + encodeURIComponent(INIT) : "");
 }
-function previewAs(sid, name) {
+let PVROLE = "student";
+function previewAs(sid, name, role) {
   let el = document.getElementById("pvw");
   if (!el) { el = document.createElement("div"); el.id = "pvw"; document.body.appendChild(el); }
-  el.innerHTML = `<div class="pvbar"><span>👁 Глазами ученика${name ? " · " + esc(name) : ""}</span><button onclick="document.getElementById('pvw').classList.remove('on');setTimeout(()=>document.getElementById('pvw').innerHTML='',400)">Закрыть</button></div>
-    <div class="pvphone"><iframe src="${esc(meUrl(sid))}" title="Кабинет ученика"></iframe></div>`;
+  const par = role === "parent", nm = String(name || "").replace(/'/g, "");
+  PVROLE = par ? "parent" : "student";
+  el.innerHTML = `<div class="pvbar"><span>👁 ${par ? "Глазами родителя" : "Глазами ученика"}${name ? " · " + esc(name) : ""}</span>
+    <div class="seg" style="margin:0;flex:0 0 auto"><button class="${par ? "" : "on"}" onclick="previewAs(${sid},'${esc(nm)}','student')">Ученик</button><button class="${par ? "on" : ""}" onclick="previewAs(${sid},'${esc(nm)}','parent')">Родитель</button></div><button onclick="document.getElementById('pvw').classList.remove('on');setTimeout(()=>document.getElementById('pvw').innerHTML='',400)">Закрыть</button></div>
+    <div class="pvphone"><iframe src="${esc(meUrl(sid, role))}" title="Кабинет ученика"></iframe></div>`;
   requestAnimationFrame(() => el.classList.add("on")); haptic("light");
 }
 async function previewPick() {
   const d = await api("students");
   openSheet(`<div class="sh-h"><b>👁 Глазами ученика</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
-    <p class="ph">Выберите ученика — откроется его кабинет-приложение так, как видит он. Только просмотр: записаться или что-то отправить отсюда нельзя.</p>
-    <div class="list stag">${d.items.map(x => `<div class="li" onclick="SHEET_BACK=null;closeSheetRaw();previewAs(${x.id},'${esc(x.name).replace(/'/g, "")}')">${ava(x.name, 30)}<div class="t">${esc(x.name)}<small>${x.next ? "след. " + dShort(x.next) + " " + hm(x.next) : "без записи"}</small></div><span class="chev">›</span></div>`).join("")}</div>`);
+    <div class="seg"><button class="${PVROLE === "parent" ? "" : "on"}" onclick="PVROLE='student';previewPick()">🎓 Как ученик</button><button class="${PVROLE === "parent" ? "on" : ""}" onclick="PVROLE='parent';previewPick()">👨‍👩‍👧 Как родитель</button></div>
+    <p class="ph">Выберите ученика — откроется его кабинет-приложение так, как видит ${PVROLE === "parent" ? "его родитель" : "он"}. Только просмотр: записаться или что-то отправить отсюда нельзя.</p>
+    <div class="list stag">${d.items.map(x => `<div class="li" onclick="SHEET_BACK=null;closeSheetRaw();previewAs(${x.id},'${esc(x.name).replace(/'/g, "")}',PVROLE)">${ava(x.name, 30)}<div class="t">${esc(x.name)}<small>${x.next ? "след. " + dShort(x.next) + " " + hm(x.next) : "без записи"}</small></div><span class="chev">›</span></div>`).join("")}</div>`);
 }
 
 // ---------- 🕐 таймлайн дня ----------
@@ -1087,7 +1096,7 @@ function listView(d) {
     html += `<div class="day${ds === todayS ? " today" : ""}"><h3>${WD[i]} <span>${day.getDate()} ${MON[day.getMonth()]}</span>${dl.length ? `<em class="dsum">${dl.length} · ${money(dsum)}</em>` : ""}</h3>
       ${dl.length ? `<div class="dload"><i style="width:${Math.min(100, dl.length / 6 * 100)}%"></i></div>` : ""}
       ${ev.length ? ev.map(x => nowLine(x) + `<div ${x.kind === "lesson" ? `data-lid="${x.id}" ` : x.kind === "free" ? `onclick="bookFree('${x.start}','${x.end}')" ` : ""}class="${x.kind === "lesson" || x.kind === "free" ? "click " : ""}${evCls(x, d.now)}">
-        ${x.kind === "block" ? "" : `<span class="tm">${hm(x.start)}${x.kind === "free" ? "–" + hm(x.end) : ""}</span>`}${x.kind === "free" ? "Свободно · ➕ записать" : esc(x.name)}${x.type ? `<br><small style="color:var(--hint)">${esc(x.type)}</small>` : ""}</div>`).join("")
+        ${x.kind === "block" ? "" : `<span class="tm">${hm(x.start)}${x.kind === "free" ? "–" + hm(x.end) : ""}</span>`}${x.kind === "free" ? "Свободно · записать или предложить" : esc(x.name)}${x.type ? `<br><small style="color:var(--hint)">${esc(x.type)}</small>` : ""}</div>`).join("")
         : `<div class="empty" style="font-size:13px">нет занятий</div>`}${ev.length && !nowDone ? `<div class="nowline"><span>сейчас ${hm(d.now)}</span></div>` : ""}</div>`;
   }
   return `<div class="days">${html}</div>`;
@@ -1463,7 +1472,7 @@ async function openStudent(sid) {
       ${d.manual ? `<button class="act" onclick="studentTools(${sid},'advance')">Изменить аванс</button>` : ""}
       <button class="act bad" onclick="archiveStudent(${sid},${!d.archived},this)">${d.archived ? 'Вернуть из архива' : '🗄 В архив'}</button>
       <button class="act" onclick="studentMore(${sid})">⋯ Доступ, родители, отпуск, отчёт</button>
-      <button class="act" onclick="journalSheet(${sid})">🧾 Журнал ученика</button><button class="act" onclick="previewAs(${sid}, CARD && CARD.name)">👁 Глазами ученика</button>
+      <button class="act" onclick="journalSheet(${sid})">🧾 Журнал ученика</button><button class="act" onclick="previewAs(${sid}, CARD && CARD.name)">👁 Глазами ученика</button><button class="act" onclick="previewAs(${sid}, CARD && CARD.name, 'parent')">👁 Глазами родителя</button>
       <button class="act bad" onclick="deleteStudent(${sid},${esc(JSON.stringify(d.name))},this)">🗑 Удалить</button></div>
     <div class="card"><h2>Карточка · нажмите, чтобы изменить</h2>
       ${EF.map(([f, t]) => `<div class="ef click" data-edit="${f}"><span>${t}</span><b class="${f === "notes" ? "pre" : ""}">${
@@ -1717,17 +1726,62 @@ async function pickDraw() {
   let times = [];
   try { times = (await api("slots", `?date=${P.day}&dur=${P.dur}${P.replaces ? "&exclude=" + P.replaces : ""}`)).times; } catch (_) {}
   if (P.from) times = times.filter(t => t >= P.from && (!P.to || t < P.to));
+  const all = times.length;
+  if (!P.all) times = niceTimes(times);
+  const hidden = all - times.length;
   const tname = (TYPES.find(t => t.id === P.tid) || {}).name || "";
+  const offer = !!P.offer && !P.replaces, rof = !!P.offer && !!P.replaces, offs = P.offs || (P.offs = []);
+  const has = t => offs.some(o => o.day === P.day && o.t === t);
   openSheet(pickHead(title) + `<div class="empty" style="margin-top:-6px">${esc(tname)} · ${P.dur} мин</div>
-    ${P.fixedDay ? "" : `<div class="hwrap"><div class="chips" style="flex-wrap:nowrap">${days.map(d =>
-      `<button class="chip${ymd(d) === P.day ? " on" : ""}" style="white-space:nowrap" onclick="P.day='${ymd(d)}';pickDraw()">${WD[(d.getDay() + 6) % 7]} ${d.getDate()}</button>`).join("")}</div></div>`}
+    <div class="seg"><button class="${offer || rof ? "" : "on"}" onclick="P.offer=false;pickDraw()">${P.replaces ? "⚡ Перенести сразу" : "✅ Записать сразу"}</button><button class="${offer || rof ? "on" : ""}" onclick="P.offer=true;pickDraw()">${P.replaces ? "📩 Предложить новое время" : "📨 Предложить время"}</button></div>
+    ${rof ? `<div class="empty" style="margin:0 0 6px">Занятие останется на месте, пока ученик не ответит: подходит, выбрать своё или оставить как было.</div>` : ""}
+    ${offer ? `<div class="empty" style="margin:0 0 6px">Отметьте до ${PMAX} вариантов (можно в разные дни) — ученик выберет одним нажатием и сразу будет записан.</div>` : ""}
+    ${P.fixedDay ? "" : `<div class="dayrail">${days.map(d =>
+      `<button class="dchip${ymd(d) === P.day ? " on" : ""}" onclick="P.day='${ymd(d)}';pickDraw()"><small>${WD[(d.getDay() + 6) % 7]}</small><b>${d.getDate()}</b>${offs.some(o => o.day === ymd(d)) ? "<i></i>" : ""}</button>`).join("")}</div>`}
     <h2 style="margin-top:10px">Свободное время · ${dShort(P.day + "T00:00")}</h2>
-    <div class="chips">${times.map(t => `<button class="chip" onclick="pickConfirm('${t}')">${t}</button>`).join("") || `<span class="empty">Свободных окон нет — выберите другой день или своё время</span>`}</div>
+    <div class="chips">${times.map(t => offer
+      ? `<button class="chip${has(t) ? " on" : ""}" onclick="offToggle('${t}')">${has(t) ? "✓ " : ""}${t}</button>`
+      : `<button class="chip" onclick="pickConfirm('${t}')">${t}</button>`).join("") || `<span class="empty">Свободных окон нет — выберите другой день или своё время</span>`}
+      ${hidden > 0 ? `<button class="chip" onclick="P.all=true;pickDraw()">ещё ${hidden}…</button>` : P.all && all > 6 ? `<button class="chip" onclick="P.all=false;pickDraw()">меньше</button>` : ""}</div>
     <div class="tools" style="margin-top:12px"><input id="ptime" type="time" style="flex:0 0 130px;min-width:0">
-      <button class="act" style="flex:1" onclick="const v=document.getElementById('ptime').value;v?pickConfirm(v):toast('Укажите время')">Своё время</button></div>`);
+      <button class="act" style="flex:1" onclick="const v=document.getElementById('ptime').value;v?${offer ? "offToggle(v)" : "pickConfirm(v)"}:toast('Укажите время')">Своё время</button></div>
+    ${offer ? `<div class="card" style="margin-top:12px"><h2>Выбрано: ${offs.length}</h2><div class="chips">${offs.sort((a, b) => (a.day + a.t).localeCompare(b.day + b.t)).map((o, i) =>
+        `<button class="chip on" onclick="offDel(${i})">${dShort(o.day + "T" + o.t)} ✕</button>`).join("") || `<span class="empty">Пока ничего</span>`}</div>
+      <div class="acts"><button class="act pri wide" ${offs.length ? "" : "disabled"} onclick="offSend()">📨 Отправить ученику (${offs.length})</button></div></div>` : ""}`);
+}
+const PMAX = 5;
+function niceTimes(ts) {           // целые часы/получасы и «встык» к занятиям; остальное — под «ещё»
+  const set = new Set(ts), mm = t => +t.slice(3), prev = t => { const x = +t.slice(0, 2) * 60 + mm(t) - 5; return String(Math.floor(x / 60)).padStart(2, "0") + ":" + String(x % 60).padStart(2, "0"); };
+  const out = ts.filter(t => mm(t) % 30 === 0 || !set.has(prev(t)));
+  return out.length ? out : ts.slice(0, 8);
+}
+function offToggle(t) {
+  const o = P.offs, i = o.findIndex(x => x.day === P.day && x.t === t);
+  if (i >= 0) o.splice(i, 1);
+  else if (o.length >= PMAX) return toast(`Не больше ${PMAX} вариантов`);
+  else o.push({day: P.day, t});
+  if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+  pickDraw();
+}
+function offDel(i) { P.offs.splice(i, 1); pickDraw(); }
+async function offSend() {
+  if (!P.offs.length) return;
+  if (!(await confirmAsk(`Отправить ${P.name} ${P.offs.length} вариант(а) времени? Сообщение придёт сразу.`))) return;
+  try {
+    const j = await post("card", {action: "offer", sid: P.sid, times: P.offs.map(o => [P.tid, o.day + "T" + o.t])});
+    toast(j.note); if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+    SHEET_BACK = null; closeSheet();
+  } catch (ex) { toast(ex.message); }
 }
 async function pickConfirm(t, force) {
   const start = P.day + "T" + t;
+  if (P.replaces && P.offer) {
+    if (!(await confirmAsk(`Предложить ${P.name} перенос на ${dShort(start)} в ${t}? Занятие останется на месте, пока он не ответит.`))) return;
+    try { const j = await post("card", {action: "resched-offer", sid: P.sid, id: P.replaces, start});
+      toast(j.note); if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success"); SHEET_BACK = null; closeSheet(); }
+    catch (ex) { toast(ex.message); }
+    return;
+  }
   if (!force && !(await confirmAsk(`${P.replaces ? "Перенести" : "Записать"} ${P.name} на ${dShort(start)} в ${t}? Ученику придёт сообщение.`))) return;
   try {
     const j = await post("book", {sid: P.sid, type: P.tid, start, replaces: P.replaces || 0, force: !!force});
@@ -1857,7 +1911,7 @@ async function operationsTab() { TILE_N = 0;
       ${li('📥', 'Calendly', 'Кто записался оттуда', '', 'calendlySheet()')}
       ${li('🗑', 'Корзина', jr.trash.length ? 'Можно вернуть: ' + jr.trash.length : 'Пусто', '', 'trashSheet()')}
       ${li('📆', 'Календари, копия, обновления', 'Google, Яндекс, iCloud · резервная копия · версия бота', '', 'systemSheet()')}
-      ${li('👁', 'Глазами ученика', 'Посмотреть кабинет-приложение как ученик', '', 'previewPick()')}
+      ${li('👁', 'Приложение глазами ученика и родителя', 'Посмотреть кабинет так, как его видят ученик и родитель', '', 'previewPick()')}
       ${li('🎨', 'Цвет панели', 'Акцентный цвет на этом устройстве', '', 'accentSheet()')}
       ${li('📲', 'Панель как приложение', 'Значок на экране телефона или компьютера', '', 'installSheet()')}
       ${li('⏱', 'Диагностика связи', 'Почему панель медленная — время каждого запроса', '', 'diagSheet()')}
@@ -3146,7 +3200,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === "/") { e.preventDefault(); go("tools").then(() => { const q = document.querySelector("#app input"); if (q) q.focus(); }); }
 });
 // Версию подставляет сервер: прежняя личная ссылка получает новый интерфейс сама.
-const PAGE_VERSION = "2026.10.20-83";
+const PAGE_VERSION = "2026.10.20-86";
 let VERSION_BUSY = false;
 // Новая версия вышла, а открыта сохранённая прежняя (так панель открывается мгновенно): без перезагрузок «в цикле» —
 // просто полоска. Новая версия докачивается в фоне и включится при следующем открытии сама; кнопка — сразу.
