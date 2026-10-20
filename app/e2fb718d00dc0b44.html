@@ -227,6 +227,7 @@ nav button .ni{display:block;font-size:18px;line-height:1.1}
 .nowline{position:relative;height:0;border-top:2px solid var(--bad);margin:9px 0 9px 6px}
 .nowline:before{content:"";position:absolute;left:-7px;top:-6px;width:10px;height:10px;border-radius:50%;background:var(--bad)}
 .nowline span{position:absolute;right:0;top:-9px;background:var(--bad);color:#fff;font-size:10.5px;font-weight:700;border-radius:8px;padding:1px 6px}
+#sheet .pdays{grid-template-columns:1fr!important}
 .dsum{float:right;font-style:normal;font-size:12px;color:var(--hint);font-weight:500;font-variant-numeric:tabular-nums}
 .dload{height:3px;border-radius:2px;background:var(--bg2);margin:-2px 0 4px;overflow:hidden}.dload i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),var(--warn))}
 .sstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-bottom:10px}
@@ -351,6 +352,20 @@ html,body{overscroll-behavior-y:none}
 .mkv{text-align:right;min-width:42px}.mkv b{display:block;font-size:20px;font-variant-numeric:tabular-nums}.mkv small{font-size:12px;font-weight:700}
 .swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.swatches button{border:0;background:var(--bg);border-radius:14px;padding:12px 4px 8px;font:inherit;font-size:12.5px;color:var(--fg);cursor:pointer}
 .swatches i{display:block;width:34px;height:34px;border-radius:50%;margin:0 auto 6px;box-shadow:0 2px 8px rgba(0,0,0,.2)}.swatches button.on{box-shadow:inset 0 0 0 2px var(--acc)}
+#pvw{position:fixed;inset:0;z-index:65;background:rgba(10,10,14,.0);display:flex;flex-direction:column;align-items:center;pointer-events:none;transition:background .35s}
+#pvw.on{background:rgba(10,10,14,.78);pointer-events:auto;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.pvbar{width:100%;max-width:440px;display:flex;align-items:center;gap:10px;padding:10px 14px;color:#fff;font-weight:600;font-size:14px;transform:translateY(-30px);opacity:0;transition:all .45s var(--spring)}
+.pvbar span{flex:1}.pvbar button{border:0;border-radius:12px;padding:8px 14px;background:#fff;color:#111;font:inherit;font-weight:700;cursor:pointer}
+.pvphone{flex:1;width:calc(100% - 20px);max-width:420px;margin-bottom:12px;border-radius:28px;overflow:hidden;background:#000;box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 0 6px #1b1d22;transform:translateY(40px) scale(.96);opacity:0;transition:all .55s var(--spring)}
+#pvw.on .pvbar,#pvw.on .pvphone{transform:none;opacity:1}
+.pvphone iframe{width:100%;height:100%;border:0;background:var(--bg2)}
+.row .n,.li .t,.lead .n,.card p,.ev{overflow-wrap:anywhere}
+html,body{overflow-x:clip}
+.eye{flex:none;border:0;background:var(--soft);color:var(--acc);border-radius:10px;width:36px;height:32px;font-size:16px;cursor:pointer}
+.pvgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.pvgrid img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;background:var(--bg2);cursor:zoom-in;margin:0!important;animation:pop .35s var(--out) both}
+.pvtext{margin-top:8px;max-height:260px;overflow:auto;background:var(--bg2);border-radius:10px;padding:10px 12px}
+.pvfile{display:flex!important;align-items:center;gap:10px;margin-top:8px!important;padding:12px!important}.pvfile span{font-size:22px}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
 /* Общие ограничения для длинных имён, адресов и узких экранов. */
 :root{--field-line:#8a9099;--field-line:color-mix(in srgb,var(--fg) 45%,var(--bg))}
@@ -461,7 +476,6 @@ const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-$
 const plural = (n, a, b, c) => { n = Math.abs(n) % 100; const k = n % 10;
   return (n > 10 && n < 20) ? c : k === 1 ? a : (k >= 2 && k <= 4) ? b : c; };
 
-const DIAG = [];
 function diagSheet() {
   const slow = DIAG.filter(x => x.all > 3000).length;
   openSheet(`<div class="sh-h"><b>⏱ Диагностика связи</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
@@ -474,13 +488,13 @@ async function fetchT(url, opt, ms) {   // таймаут охватывает �
   for (let i = 0; i < 2; i++) {
     const c = new AbortController(), t = setTimeout(() => c.abort(), ms * (i + 1));
     try {
-      const t0 = performance.now(), r = await fetch(url, {...opt, signal: c.signal});
-      const t1 = performance.now();
+      const t0 = Date.now(), r = await fetch(url, {...opt, signal: c.signal});
+      const t1 = Date.now();
       if (r.status === 403) throw new Error("auth");
       if (!r.ok) throw new Error("http " + r.status);
       const j = await r.json(), m = /dur=(\d+)/.exec(r.headers.get("Server-Timing") || "");
-      DIAG.push({u: url.replace(/^api\//, ""), head: Math.round(t1 - t0), all: Math.round(performance.now() - t0), srv: m ? +m[1] : null, try: i + 1});
-      if (DIAG.length > 40) DIAG.shift();
+      try { DIAG.push({u: url.replace(/^api\//, ""), head: Math.round(t1 - t0), all: Date.now() - t0, srv: m ? +m[1] : null, try: i + 1});
+        if (DIAG.length > 40) DIAG.shift(); } catch (_) {}
       return j;
     }
     catch (ex) {
@@ -490,6 +504,7 @@ async function fetchT(url, opt, ms) {   // таймаут охватывает �
     finally { clearTimeout(t); }
   }
 }
+const DIAG = [];   // ⏱ диагностика связи: последние запросы
 let USE_CACHE = false; const STALE = new Map(), FRESH = {};   // FRESH: когда данные получены в этой сессии   // что показано из памяти: адрес → текст кэша
 const pcKey = (what, q) => "pc:" + what + q;
 async function api(what, q = "") {
@@ -742,9 +757,9 @@ function excelSheet() {
       ${row("🧪", "Пробники", "Сводка по ученикам с цветом роста + все результаты", "mocks")}</div>`);
 }
 async function xExport(what, el) {
-  if (el) el.style.opacity = .5;
+  if (el && el.style) el.style.opacity = .5;
   try { toast((await post("x", {action: "export", what, period: XP})).note); } catch (ex) { toast(ex.message); }
-  finally { if (el) el.style.opacity = ""; }
+  finally { if (el && el.style) el.style.opacity = ""; }
 }
 // ---------- 🎨 цвет панели (на этом устройстве) ----------
 const ACCENTS = [["Telegram", ""], ["Синий", "#2f7de1"], ["Фиолетовый", "#7a3fc4"], ["Изумруд", "#14a37f"], ["Коралл", "#f0645a"], ["Янтарь", "#e08a12"], ["Розовый", "#d63b8f"], ["Графит", "#4a5568"]];
@@ -755,6 +770,27 @@ function accentSheet() {
   openSheet(`<div class="sh-h"><b>🎨 Цвет панели</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
     <p class="ph">Только на этом устройстве. «Telegram» — как в настройках Telegram.</p>
     <div class="swatches">${ACCENTS.map(([n, c]) => `<button class="${c === cur ? "on" : ""}" onclick="try{localStorage.setItem('accent','${c}')}catch(_){};applyAccent('${c}');accentSheet();haptic('light')"><i style="background:${c || "var(--tg-theme-button-color,#2f7de1)"}"></i>${n}</button>`).join("")}</div>`);
+}
+
+// ---------- 👁 глазами ученика: его кабинет-приложение внутри панели (только просмотр) ----------
+function meUrl(sid) {
+  const base = new URL(".", document.baseURI).href;
+  const pages = /github\.io$/.test(location.hostname);
+  const u = pages ? location.origin + "/tutor-table/me.html?u=" + encodeURIComponent(base) : base + "me?";
+  return u + (pages ? "&" : "") + "as=" + sid + (KEY ? "&k=" + encodeURIComponent(KEY) : "") + (INIT ? "#tgWebAppData=" + encodeURIComponent(INIT) : "");
+}
+function previewAs(sid, name) {
+  let el = document.getElementById("pvw");
+  if (!el) { el = document.createElement("div"); el.id = "pvw"; document.body.appendChild(el); }
+  el.innerHTML = `<div class="pvbar"><span>👁 Глазами ученика${name ? " · " + esc(name) : ""}</span><button onclick="document.getElementById('pvw').classList.remove('on');setTimeout(()=>document.getElementById('pvw').innerHTML='',400)">Закрыть</button></div>
+    <div class="pvphone"><iframe src="${esc(meUrl(sid))}" title="Кабинет ученика"></iframe></div>`;
+  requestAnimationFrame(() => el.classList.add("on")); haptic("light");
+}
+async function previewPick() {
+  const d = await api("students");
+  openSheet(`<div class="sh-h"><b>👁 Глазами ученика</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
+    <p class="ph">Выберите ученика — откроется его кабинет-приложение так, как видит он. Только просмотр: записаться или что-то отправить отсюда нельзя.</p>
+    <div class="list stag">${d.items.map(x => `<div class="li" onclick="SHEET_BACK=null;closeSheetRaw();previewAs(${x.id},'${esc(x.name).replace(/'/g, "")}')">${ava(x.name, 30)}<div class="t">${esc(x.name)}<small>${x.next ? "след. " + dShort(x.next) + " " + hm(x.next) : "без записи"}</small></div><span class="chev">›</span></div>`).join("")}</div>`);
 }
 // ---------- Сегодня ----------
 const LS = {};   // занятия по номеру — для карточки занятия
@@ -1340,7 +1376,7 @@ async function openStudent(sid) {
       ${d.manual ? `<button class="act" onclick="studentTools(${sid},'advance')">Изменить аванс</button>` : ""}
       <button class="act bad" onclick="archiveStudent(${sid},${!d.archived},this)">${d.archived ? 'Вернуть из архива' : '🗄 В архив'}</button>
       <button class="act" onclick="studentMore(${sid})">⋯ Доступ, родители, отпуск, отчёт</button>
-      <button class="act" onclick="journalSheet(${sid})">🧾 Журнал ученика</button>
+      <button class="act" onclick="journalSheet(${sid})">🧾 Журнал ученика</button><button class="act" onclick="previewAs(${sid}, CARD && CARD.name)">👁 Глазами ученика</button>
       <button class="act bad" onclick="deleteStudent(${sid},${esc(JSON.stringify(d.name))},this)">🗑 Удалить</button></div>
     <div class="card"><h2>Карточка · нажмите, чтобы изменить</h2>
       ${EF.map(([f, t]) => `<div class="ef click" data-edit="${f}"><span>${t}</span><b class="${f === "notes" ? "pre" : ""}">${
@@ -1514,7 +1550,7 @@ function drawBank() {
     <div class="tools"><input id="bq" placeholder="🔎 Тема: гидролиз, ОВР, алканы…" value="${esc(B.q)}"></div>
     ${Object.keys(groups).length ? Object.entries(groups).map(([g, xs]) => `<div class="card"><h2>${esc(g)}</h2>
       ${xs.map(x => `<label class="row click"><input type="checkbox" data-bx="${x.id}" ${B.sel.has(x.id) ? "checked" : ""}>
-        <div class="n">${esc(x.title)}<small>${x.kind === "lec" ? "лекция" : "задание"}${x.files > 1 ? " · " + x.files + " файлов" : ""}${x.uses ? " · выдавали " + x.uses + " раз" : ""}</small></div></label>`).join("")}</div>`).join("")
+        <div class="n">${esc(x.title)}<small>${x.kind === "lec" ? "лекция" : "задание"}${x.files > 1 ? " · " + x.files + " файлов" : ""}${x.uses ? " · выдавали " + x.uses + " раз" : ""}</small></div><button class="eye" onclick="event.preventDefault();event.stopPropagation();libPreview(${x.id})" title="Что внутри">👁</button></label>`).join("")}</div>`).join("")
       : `<div class="card empty">${B.q ? "Ничего не нашлось" : "Банк пуст — лекции и заготовки добавляются в боте («📚 Задания»)."}</div>`}
     ${B.sel.size ? `<div class="acts" style="position:sticky;bottom:10px"><button class="act pri wide" onclick="B.step=2;drawBank()">Дальше — кому (${B.sel.size}) ›</button></div>` : ""}`;
   let t = 0; document.getElementById("bq").oninput = e => { clearTimeout(t); t = setTimeout(() => bankTab(e.target.value.trim()), 350); };
@@ -1644,6 +1680,7 @@ async function openHw(id) {
   const can = ["submitted", "checked", "returned"].includes(d.status);
   openSheet(`<div class="sh-h"><b>${esc(d.name)}</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
     <div class="card"><h2>Задание #${d.id} · ${esc(st)}</h2><div class="pre">${esc(d.task_preview || "—")}</div>
+      <div id="hw-task" class="ans"><button class="act" style="width:100%;margin-top:8px" onclick="loadTask(${d.id},this.parentNode)">👁 Показать, что было выдано</button></div>
       <div class="empty" style="font-size:13px">${d.deadline ? "срок " + dShort(d.deadline.replace(" ", "T")) : ""}${d.submitted ? " · сдано " + dShort(d.submitted.replace(" ", "T")) : ""}${d.grade ? " · оценка " + esc(d.grade) : ""}</div></div>
     <div class="card ans"><h2>Ответ ученика</h2>${items || (hasMsg ? "" : `<div class="empty">Ученик ещё не сдал</div>`)}
       ${hasMsg ? `<button class="act wide" style="margin-top:8px" onclick="hwToChat(${d.id})">📨 Показать ответ в чате с ботом</button>` : ""}</div>
@@ -1728,11 +1765,12 @@ async function operationsTab() { TILE_N = 0;
       ${tile('🛠', 'Добавить функцию', 'Заявка Claude', 'ideasSheet()')}
     </div>
     <div class="grp-t">Ещё</div><div class="list">
-      ${li('📅', 'Расписание — ещё', 'Чёт/нечёт, лист ожидания, близкие, предложения', '', 'scheduleMore()')}
+      ${li('📅', 'Расписание — ещё', 'Чёт/нечёт, лист ожидания, предложения', '', 'scheduleMore()')}
       ${li('💭', 'Что разобрать на занятиях', 'Пожелания учеников', '', 'wishesSheet()')}
       ${li('📥', 'Calendly', 'Кто записался оттуда', '', 'calendlySheet()')}
       ${li('🗑', 'Корзина', jr.trash.length ? 'Можно вернуть: ' + jr.trash.length : 'Пусто', '', 'trashSheet()')}
       ${li('📆', 'Календари, копия, обновления', 'Google, Яндекс, iCloud · резервная копия · версия бота', '', 'systemSheet()')}
+      ${li('👁', 'Глазами ученика', 'Посмотреть кабинет-приложение как ученик', '', 'previewPick()')}
       ${li('🎨', 'Цвет панели', 'Акцентный цвет на этом устройстве', '', 'accentSheet()')}
       ${li('📲', 'Панель как приложение', 'Значок на экране телефона или компьютера', '', 'installSheet()')}
       ${li('⏱', 'Диагностика связи', 'Почему панель медленная — время каждого запроса', '', 'diagSheet()')}
@@ -2429,10 +2467,35 @@ async function libSaveNew(kind, button) {
     toast((await post('library', {action: 'new', kind, section: val('ln-sec'), title: val('ln-title'), topic: val('ln-topic'), text, msgs})).note); LIB_OPEN = val('ln-sec'); await librarySheet(); }
   catch (ex) { toast(ex.message); button.disabled = false; }
 }
+// 👁 предпросмотр материала: картинки — сразу, файлы — ссылкой, текст — текстом (как ответ ученика)
+function mediaHtml(items) {
+  if (!items.length) return `<div class="empty">Пусто</div>`;
+  const ph = items.filter(it => it.kind === "photo");
+  return (ph.length ? `<div class="pvgrid">${ph.map(it => `<img loading="lazy" data-full="1" src="${esc(it.url)}" alt="">`).join("")}</div>` : "")
+    + items.filter(it => it.kind !== "photo").map(it => it.kind === "text" ? `<div class="pre pvtext">${esc(it.text)}</div>`
+      : it.kind === "gone" ? `<div class="hint">⚠️ ${esc(it.name || "Часть")} — исходное сообщение удалено из чата</div>`
+      : `<a class="lk pvfile" data-open="${esc(new URL(it.url || "", document.baseURI).href)}" href="#"><span>${it.kind === "document" && /\.pdf$/i.test(it.name) ? "📕" : it.kind === "video" ? "🎬" : it.kind === "voice" ? "🎙" : "📄"}</span>${esc(it.name || "файл")}</a>${it.text ? `<div class="hint">${esc(it.text)}</div>` : ""}`).join("")
+    + (ph.length && ph.some(it => it.text) ? `<div class="hint">${ph.filter(it => it.text).map(it => esc(it.text)).join("<br>")}</div>` : "");
+}
+async function loadPreview(id, box) {
+  try { const d = await api("libpreview", `?id=${id}`); if (box) box.innerHTML = `<h2>Что внутри · ${d.items.length}</h2>` + mediaHtml(d.items); return d; }
+  catch (ex) { if (box) box.innerHTML = `<div class="empty">Не получилось показать: ${esc(ex.message)}</div>`; }
+}
+async function loadTask(id, box) {
+  box.innerHTML = `<div class="skel" style="height:110px;margin:8px 0 0"></div>`;
+  try { const d = await api("hwtask", `?id=${id}`); box.innerHTML = mediaHtml(d.items); }
+  catch (ex) { box.innerHTML = `<div class="hint">Не получилось показать: ${esc(ex.message)}</div>`; }
+}
+async function libPreview(id) {
+  openSheet(`<div class="sh-h"><b>👁 Что внутри</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div><div id="lib-pv2" class="card ans pvbox"><div class="skel" style="height:160px;margin:0"></div></div>`, () => { SHEET_BACK = null; closeSheetRaw(); });
+  const d = await loadPreview(id, document.getElementById("lib-pv2"));
+  if (d) { const h = sheet.querySelector(".sh-h b"); if (h) h.textContent = "👁 " + d.title; }
+}
 async function libItem(id) {
   const d = await api('library', `?item=${id}`), x = d.item; LIB = d;
+  setTimeout(() => loadPreview(id, document.getElementById("lib-pv")), 0);
   openSheet(`<div class="sh-h"><b>${x.kind === 'lec' ? '📒' : '📦'} ${esc(x.title)}</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
-    <div class="list">${x.files.map(n => `<div class="li static"><span class="ic">📄</span><div class="t">${esc(n)}</div></div>`).join('')}</div>
+    <div id="lib-pv" class="card ans pvbox"><div class="skel" style="height:120px;margin:0"></div></div>
     <div class="acts"><button class="act" onclick="libPost({action:'preview',id:${id}},this,null,()=>libItem(${id}))">👀 Прислать мне в чат</button>
       <button class="act pri" onclick="SHEET_BACK=null;closeSheet();go('hw')">📤 Выдать</button></div>
     <div class="card set"><label>Название <input id="li-title" maxlength="60" value="${esc(x.title)}"></label><label>Тема <input id="li-topic" maxlength="40" value="${esc(x.topic)}"></label>
@@ -2599,16 +2662,31 @@ async function scheduleMore(key = '', off = 0) {
       <button class="act" style="width:100%" onclick="miscPost({action:'week-flip'})">🔁 Поменять чёт ↔ нечёт</button></div>
     <div class="grp-t">🔔 Лист ожидания</div><div class="list">${d.waitlist.map(w => `<div class="li static"><div class="t">${esc(w.day)} · ${esc(w.name)}<small>${w.status === 'offered' ? 'предложено время' : 'ждёт'}</small></div></div>`).join('') || '<div class="li static"><div class="t" style="color:var(--hint)">Сейчас никто не ждёт</div></div>'}</div>
     <p class="ph">Освободится время — бот сам предложит его по очереди.</p>
-    ${d.people.length ? `<div class="grp-t">👨‍👩‍👧 Занятость близких</div><div class="list">${d.people.map(p => `<div class="li" onclick="scheduleMore('${esc(p.key)}',0)"><div class="t">${esc(p.name)}<small>${esc(p.status)}</small></div><span class="chev">›</span></div>`).join('')}</div>
-      ${d.week ? `<div class="card"><div class="chips"><button class="chip" onclick="scheduleMore('${esc(key)}',${off - 7})">◀ Неделя</button><button class="chip" onclick="scheduleMore('${esc(key)}',0)">Эта</button><button class="chip" onclick="scheduleMore('${esc(key)}',${off + 7})">Неделя ▶</button></div><pre style="white-space:pre-wrap;font:inherit;font-size:13.5px">${esc(d.week)}</pre></div>` : ''}` : ''}
     ${d.proposals.length ? `<div class="grp-t">💡 Предложения от близких</div>${d.proposals.map(p => `<div class="card"><b>${esc(p.who)}</b><p>${esc(p.text)}</p>
       <div class="acts"><button class="act ok" onclick="miscPost({action:'proposal-ok',id:'${esc(p.id)}'},this)">✅ Одобрить — отдать Claude</button><button class="act bad" onclick="miscPost({action:'proposal-no',id:'${esc(p.id)}'},this)">❌ Отклонить</button></div></div>`).join('')}` : ''}`);
 }
-async function peopleSheet() {   // 👨‍👩‍👧 занятость близких — сразу к этому разделу
-  await scheduleMore();
-  const h = [...sheet.querySelectorAll(".grp-t")].find(x => x.textContent.includes("Занятость близких"));
-  if (h) h.scrollIntoView({behavior: "smooth", block: "start"});
-  else toast("Близких пока нет — их добавляют в боте: ⚙️ Настройки → 👨‍👩‍👧 Близкие");
+function peopleWeek(w, key) {   // как вкладка «Неделя»: дни карточками, занятия — время, без имён
+  const m = new Date(w.mon + "T12:00:00"), e = new Date(m); e.setDate(e.getDate() + 6);
+  const K = {l: ["Занятие", ""], g: ["Группа", "group"], x: ["Занят(а)", "block"]};
+  const total = w.days.reduce((a, d) => a + d.items.filter(x => x.k !== "x").length, 0);
+  return `<div class="week-head" style="margin-top:6px"><button onclick="peopleSheet('${esc(key)}',${w.off - 1})">‹</button>
+      <b>${m.getDate()} ${MON[m.getMonth()]} – ${e.getDate()} ${MON[e.getMonth()]} · ${total} ${plural(total, "занятие", "занятия", "занятий")}</b>
+      <button onclick="peopleSheet('${esc(key)}',${w.off + 1})">›</button></div>
+    ${w.off ? `<div class="chips" style="justify-content:center"><button class="chip" onclick="peopleSheet('${esc(key)}',0)">Эта неделя</button></div>` : ""}
+    <div class="days pdays">${w.days.map((d, i) => { const dd = new Date(d.date + "T12:00:00"), les = d.items.filter(x => x.k !== "x");
+      return `<div class="day${d.today ? " today" : ""}"><h3>${WD[i]} <span>${dd.getDate()} ${MON[dd.getMonth()]}</span>${les.length ? `<em class="dsum">${les.length} зан.</em>` : ""}</h3>
+        ${d.items.length ? d.items.map(x => `<div class="ev ${K[x.k] ? K[x.k][1] : ""}"><span class="tm">${x.s}–${x.e}</span>${K[x.k] ? K[x.k][0] : "Занят(а)"}</div>`).join("")
+          : `<div class="ev free">Свободно весь день</div>`}</div>`; }).join("")}</div>`;
+}
+async function peopleSheet(key = '', off = 0) {   // 👨‍👩‍👧 занятость близких — свой раздел
+  const d = await api('misc', key ? `?key=${encodeURIComponent(key)}&off=${off}` : '');
+  if (!d.people.length) return openSheet(`<div class="sh-h"><b>👨‍👩‍👧 Занятость близких</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
+    <div class="card"><p>Близких пока нет.</p><p class="hint">Их добавляют в боте: ⚙️ Настройки → 👨‍👩‍👧 Близкие. Потом здесь будет видно, когда они свободны.</p></div>`);
+  const sel = key || '';
+  openSheet(`<div class="sh-h"><b>👨‍👩‍👧 Занятость близких</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
+    <div class="list stag">${d.people.map(p => `<div class="li${p.key === sel ? ' on' : ''}" onclick="peopleSheet('${esc(p.key)}',0)">${ava(p.name, 32)}<div class="t">${esc(p.name)}<small>${esc(p.status)}</small></div><span class="chev">${p.key === sel ? '⌄' : '›'}</span></div>`).join('')}</div>
+    ${d.wk ? peopleWeek(d.wk, sel)
+      : `<p class="ph">Нажмите на человека — покажу его неделю.</p>`}`);
 }
 async function miscPost(body, button) {
   if (button) button.disabled = true;
@@ -2660,9 +2738,10 @@ const FEATURES = [
   ['📆 Календари, копия, обновления', 'календарь google яндекс icloud подписка копия бэкап обновление версия откат диск', 'systemSheet()'],
   ['📥 Calendly', 'calendly кто записался', 'calendlySheet()'],
   ['💭 Что разобрать', 'пожелания что разобрать тема фото задачи', 'wishesSheet()'],
-  ['📅 Расписание — ещё', 'чёт нечёт неделя лист ожидания близкие предложения', 'scheduleMore()'],
+  ['📅 Расписание — ещё', 'чёт нечёт неделя лист ожидания предложения', 'scheduleMore()'],
   ['🧪 Пробники учеников', 'пробники егэ огэ баллы рост график результаты', 'mocksSheet()'],
   ['📥 Выгрузка в Excel', 'excel эксель выгрузка таблица xlsx скачать отчёт', 'excelSheet()'],
+  ['👁 Глазами ученика', 'ученик тест просмотр как видит кабинет приложение режим', 'previewPick()'],
   ['🎨 Цвет панели', 'цвет тема оформление акцент', 'accentSheet()'],
   ['🎯 Цель месяца', 'цель месяц план доход заработок', "go('home').then(goalSet)"],
   ['👨‍👩‍👧 Занятость близких', 'близкие семья родные занятость свободны заняты календарь', 'peopleSheet()'],
@@ -2947,7 +3026,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === "/") { e.preventDefault(); go("tools").then(() => { const q = document.querySelector("#app input"); if (q) q.focus(); }); }
 });
 // Версию подставляет сервер: прежняя личная ссылка получает новый интерфейс сама.
-const PAGE_VERSION = "2026.10.20-76";
+const PAGE_VERSION = "2026.10.20-79";
 let VERSION_BUSY = false;
 // Новая версия вышла, а открыта сохранённая прежняя (так панель открывается мгновенно): без перезагрузок «в цикле» —
 // просто полоска. Новая версия докачивается в фоне и включится при следующем открытии сама; кнопка — сразу.
