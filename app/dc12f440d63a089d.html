@@ -340,7 +340,7 @@ html.locked,html.locked body{overflow:hidden;overscroll-behavior:none}
 html,body{overscroll-behavior-y:none}
 #sheet{overscroll-behavior:contain}
 #qs-res{overscroll-behavior:contain}
-#app{touch-action:pan-y pinch-zoom}
+#app{touch-action:pan-y pinch-zoom;min-height:calc(100vh - 70px);min-height:calc(100dvh - 70px)}
 .newscard{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--soft),rgba(142,107,216,.14));border-radius:18px;padding:12px 14px;margin-bottom:12px;cursor:pointer;animation:rise .45s var(--out) both}
 .newscard .nc-ic{font-size:22px}.newscard .n{flex:1;min-width:0}.newscard small{display:block;color:var(--hint);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.newscard .chev{color:var(--hint);font-size:20px}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
@@ -2681,7 +2681,13 @@ async function uploadGKey(button, retried) {
       <input readonly value="${esc(j.email)}" style="width:100%"><button class="act" onclick="copyPeopleLink(this.previousElementSibling)">📋 Скопировать</button></div>`, () => systemSheet()); }
   catch (ex) { toast(ex.message); button.disabled = false; }
 }
-const TABS = {home, students, week: () => week(0), hw: hwTab, money: moneyTab, tools:operationsTab};
+const TABS = {home, students, week: () => week(0), hw: hwTab, money: moneyTab, tools: async () => { await operationsTab(); verLabel(); }};
+function verLabel() {   // какая версия панели открыта — чтобы при проверке бет было понятно, свежая ли
+  const p = document.createElement("p"); p.className = "ph"; p.style.cssText = "text-align:center;margin:18px 0 0";
+  p.textContent = "Версия панели " + (PAGE_VERSION.startsWith("__") ? "—" : PAGE_VERSION);
+  fetchT("api/version", {headers: AUTH, cache: "no-store"}, 9000).then(v => { if (v.version && v.version !== PAGE_VERSION && !PAGE_VERSION.startsWith("__")) p.textContent += ` · у бота уже ${v.version} — включится при следующем открытии`; }).catch(() => {});
+  app.appendChild(p);
+}
 const TAB_ORDER = ["home", "students", "week", "hw", "money", "tools"];
 // Переключения вкладок идут по очереди: пока рисуется одна, следующая ждёт (берётся только последняя).
 // Иначе медленный ответ прежней вкладки мог дорисоваться поверх новой — экран «залипал».
@@ -2818,13 +2824,15 @@ document.addEventListener("pointerdown", e => {
   // Направление решаем по первым ~14 px: «вбок» — двигаем вкладку и НЕ даём странице прокручиваться;
   // «вверх-вниз» — обычная прокрутка, вкладку не трогаем. После свайпа нажатие под пальцем гасим.
   let x0 = null, y0 = 0, dx = 0, lock = "", killClick = 0;
-  const scrollsX = el => { for (let e = el; e && e !== app; e = e.parentElement) {
+  const scrollsX = el => { for (let e = el; e && e !== document.body; e = e.parentElement) {
       if (e.matches("input,textarea,select,.sw")) return true;
       const o = getComputedStyle(e).overflowX; if ((o === "auto" || o === "scroll") && e.scrollWidth > e.clientWidth + 2) return true; }
     return false; };
-  app.addEventListener("touchstart", e => { if (sheet.classList.contains("on") || e.touches.length > 1 || scrollsX(e.target)) { x0 = null; return; }
+  // слушаем весь документ: свайп работает с любого места, кроме панели вкладок, окон и плавающих кнопок
+  document.addEventListener("touchstart", e => { if (sheet.classList.contains("on") || e.touches.length > 1 || scrollsX(e.target)
+      || e.target.closest("nav,#sheet,#qs,.fabs,#story,#ptr,#newver")) { x0 = null; return; }
     x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; lock = ""; }, {passive: true});
-  app.addEventListener("touchmove", e => { if (x0 === null) return;
+  document.addEventListener("touchmove", e => { if (x0 === null) return;
     const mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
     if (!lock && (Math.abs(mx) > 14 || Math.abs(my) > 10)) lock = Math.abs(mx) > Math.abs(my) * 1.6 ? "x" : "y";
     if (lock === "y") { x0 = null; return; }
@@ -2839,7 +2847,7 @@ document.addEventListener("pointerdown", e => {
     if (Math.abs(dx) < 70) return;
     const i = TAB_ORDER.indexOf(tab) + (dx < 0 ? 1 : -1); if (i < 0 || i >= TAB_ORDER.length) return;
     haptic("light"); scrollTo(0, 0); go(TAB_ORDER[i]); };
-  app.addEventListener("touchend", end); app.addEventListener("touchcancel", end);
+  document.addEventListener("touchend", end); document.addEventListener("touchcancel", end);
   document.addEventListener("click", e => { if (Date.now() - killClick < 450) { e.stopPropagation(); e.preventDefault(); } }, true);
 })();
 // потянуть вниз — обновить вкладку
@@ -2865,7 +2873,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === "/") { e.preventDefault(); go("tools").then(() => { const q = document.querySelector("#app input"); if (q) q.focus(); }); }
 });
 // Версию подставляет сервер: прежняя личная ссылка получает новый интерфейс сама.
-const PAGE_VERSION = "2026.10.20-71";
+const PAGE_VERSION = "2026.10.20-74";
 let VERSION_BUSY = false;
 // Новая версия вышла, а открыта сохранённая прежняя (так панель открывается мгновенно): без перезагрузок «в цикле» —
 // просто полоска. Новая версия докачивается в фоне и включится при следующем открытии сама; кнопка — сразу.
