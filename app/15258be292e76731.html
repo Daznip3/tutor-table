@@ -340,7 +340,7 @@ html.locked,html.locked body{overflow:hidden;overscroll-behavior:none}
 html,body{overscroll-behavior-y:none}
 #sheet{overscroll-behavior:contain}
 #qs-res{overscroll-behavior:contain}
-#app{touch-action:pan-y pinch-zoom}
+#app{touch-action:pan-y pinch-zoom;min-height:calc(100vh - 70px);min-height:calc(100dvh - 70px)}
 .newscard{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--soft),rgba(142,107,216,.14));border-radius:18px;padding:12px 14px;margin-bottom:12px;cursor:pointer;animation:rise .45s var(--out) both}
 .newscard .nc-ic{font-size:22px}.newscard .n{flex:1;min-width:0}.newscard small{display:block;color:var(--hint);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.newscard .chev{color:var(--hint);font-size:20px}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
@@ -876,6 +876,7 @@ async function week(shift = 0) {
     <button onclick="week(1)">›</button></div>
     <div class="chips" style="justify-content:center;margin-bottom:10px">
       <button class="chip" onclick="blocksSheet()">⛔ Закрыть время / отпуск</button>
+      <button class="chip" onclick="peopleSheet()">👨‍👩‍👧 Близкие</button>
       ${lessons.length ? `<span class="chip on">💰 ${money(lessons.reduce((a, x) => a + (x.price || 0), 0))} за неделю</span>` : ""}
       ${free.length ? `<button class="chip" onclick="copyFree()">📋 Свободное время · ${Math.round(freeMin / 60)} ч</button>` : ""}
       ${ymd(W) !== ymd(monday(new Date())) ? `<button class="chip" onclick="W=null;week()">Эта неделя</button>` : ""}</div>
@@ -1638,11 +1639,14 @@ const li = (ic, title, sub, v, on) => `<div class="li" onclick="${on}"><span cla
 let TILE_N = 0;
 const tile = (ic, title, sub, on, cnt) => `<button class="tile" onclick="${on}"><i style="background:linear-gradient(135deg,${PAL[TILE_N % PAL.length]}33,${PAL[(TILE_N++ + 1) % PAL.length]}33)">${ic}</i><b>${title}</b><small>${sub}</small>${cnt ? `<span class="cnt">${cnt}</span>` : ''}</button>`;
 const SET_IC = {hours: '🕒', time: '⏱', rules: '📏', types: '📚', grp: '👥', prices: '💵', pay: '💰', requisites: '💳', costs: '🧾', rem: '🔔', texts: '💬', extra: '✨', sty: '🎨', faq: '❓', links: '🔗', sec: '🔐'};
+// «Срочно» на вкладке «Меню»: куда ведёт пункт (go на эту же вкладку ничего не делал)
+const URG_ACT = {"upd:go": "sysPost({action:'upd-go'},null,'Установить новую версию сейчас? Бот перезапустится на минуту.')",
+                 "cyq": "calendlySheet()"};
 async function operationsTab() { TILE_N = 0;
   const [d, jr] = await Promise.all([api('operations'), api('journal')]);
   OPS = d; if (!SET) SET = await api('settings');
   const urg = jr.urgent;
-  app.innerHTML = `${urg.length ? `<div class="banner"><div class="n"><b>🚨 Срочно — ждёт вашего действия</b>${urg.map(u => `<div class="urg" ${u.tab ? `onclick="go('${u.tab}')"` : ''}><span>${esc(u.title)}</span><em>${u.n}</em>${u.tab ? '<span class="chev">›</span>' : ''}</div>`).join('')}</div></div>`
+  app.innerHTML = `${urg.length ? `<div class="banner"><div class="n"><b>🚨 Срочно — ждёт вашего действия</b>${urg.map(u => `<div class="urg" ${URG_ACT[u.code] || u.tab ? `onclick="${URG_ACT[u.code] || `go('${u.tab}')`}"` : ''}><span>${esc(u.title)}</span><em>${u.n}</em>${u.tab ? '<span class="chev">›</span>' : ''}</div>`).join('')}</div></div>`
       : `<div class="banner ok"><div class="n"><b>✅ Срочного нет</b><small style="color:var(--hint)">Всё сделано — можно выдохнуть.</small></div></div>`}
     <input placeholder="🔎 Найти: реквизиты, отпуск, цена, ПИН…" style="width:100%;margin-bottom:10px" oninput="searchFeatures(this.value,'fs-out-m')"><div id="fs-out-m"></div>
     <div class="tiles">
@@ -1651,6 +1655,7 @@ async function operationsTab() { TILE_N = 0;
       ${tile('🌴', 'Отпуск', d.vacations.length ? d.vacations.map(v => esc(v.label)).join(', ') : 'Закрыть дни записи', 'vacationSheet()')}
       ${tile('📚', 'Библиотека', 'Лекции и заготовки ДЗ', 'librarySheet()')}
       ${tile('🧾', 'Журнал', jr.undo.length ? 'Есть что отменить' : 'Кто что сделал', 'journalSheet()', jr.undo.length)}
+      ${tile('👨‍👩‍👧', 'Занятость близких', 'Когда свободны и заняты', 'peopleSheet()')}
       ${tile('🛠', 'Добавить функцию', 'Заявка Claude', 'ideasSheet()')}
     </div>
     <div class="grp-t">Ещё</div><div class="list">
@@ -2529,6 +2534,12 @@ async function scheduleMore(key = '', off = 0) {
     ${d.proposals.length ? `<div class="grp-t">💡 Предложения от близких</div>${d.proposals.map(p => `<div class="card"><b>${esc(p.who)}</b><p>${esc(p.text)}</p>
       <div class="acts"><button class="act ok" onclick="miscPost({action:'proposal-ok',id:'${esc(p.id)}'},this)">✅ Одобрить — отдать Claude</button><button class="act bad" onclick="miscPost({action:'proposal-no',id:'${esc(p.id)}'},this)">❌ Отклонить</button></div></div>`).join('')}` : ''}`);
 }
+async function peopleSheet() {   // 👨‍👩‍👧 занятость близких — сразу к этому разделу
+  await scheduleMore();
+  const h = [...sheet.querySelectorAll(".grp-t")].find(x => x.textContent.includes("Занятость близких"));
+  if (h) h.scrollIntoView({behavior: "smooth", block: "start"});
+  else toast("Близких пока нет — их добавляют в боте: ⚙️ Настройки → 👨‍👩‍👧 Близкие");
+}
 async function miscPost(body, button) {
   if (button) button.disabled = true;
   try { toast((await post('misc', body)).note); await scheduleMore(); }
@@ -2580,6 +2591,7 @@ const FEATURES = [
   ['📥 Calendly', 'calendly кто записался', 'calendlySheet()'],
   ['💭 Что разобрать', 'пожелания что разобрать тема фото задачи', 'wishesSheet()'],
   ['📅 Расписание — ещё', 'чёт нечёт неделя лист ожидания близкие предложения', 'scheduleMore()'],
+  ['👨‍👩‍👧 Занятость близких', 'близкие семья родные занятость свободны заняты календарь', 'peopleSheet()'],
   ['📚 Библиотека', 'библиотека лекции заготовки банк раздел кабинет', 'librarySheet()'],
   ['🧪 Пробники и вводные', 'пробник егэ огэ баллы вводный тест трекер', 'teachingTools()'],
   ['➕ Новое задание', 'задание дз выдать домашка', 'newHomework()'],
@@ -2853,7 +2865,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === "/") { e.preventDefault(); go("tools").then(() => { const q = document.querySelector("#app input"); if (q) q.focus(); }); }
 });
 // Версию подставляет сервер: прежняя личная ссылка получает новый интерфейс сама.
-const PAGE_VERSION = "2026.10.20-69";
+const PAGE_VERSION = "2026.10.20-72";
 let VERSION_BUSY = false;
 // Новая версия вышла, а открыта сохранённая прежняя (так панель открывается мгновенно): без перезагрузок «в цикле» —
 // просто полоска. Новая версия докачивается в фоне и включится при следующем открытии сама; кнопка — сразу.
