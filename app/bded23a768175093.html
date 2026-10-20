@@ -366,6 +366,22 @@ html,body{overflow-x:clip}
 .pvgrid img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;background:var(--bg2);cursor:zoom-in;margin:0!important;animation:pop .35s var(--out) both}
 .pvtext{margin-top:8px;max-height:260px;overflow:auto;background:var(--bg2);border-radius:10px;padding:10px 12px}
 .pvfile{display:flex!important;align-items:center;gap:10px;margin-top:8px!important;padding:12px!important}.pvfile span{font-size:22px}
+.askbox{background:var(--bg);border-radius:16px;padding:12px;animation:pop .35s var(--out) both}.asksay{font-weight:600;margin-bottom:10px}
+.askacts{display:flex;flex-wrap:wrap;gap:8px}.askacts button{border:0;border-radius:12px;padding:10px 12px;font:inherit;font-size:14px;background:var(--bg2);color:var(--fg);cursor:pointer}
+.askacts button.pri{background:var(--acc);color:var(--accfg);font-weight:600}.askacts button.bad{background:rgba(214,69,69,.13);color:var(--bad)}
+.dline{padding:12px 14px}.dlh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}.dlh span{color:var(--hint);font-size:13px}
+.dlbar{position:relative;height:26px;border-radius:9px;background:var(--bg2)}
+.dlbar i{position:absolute;top:3px;bottom:3px;border-radius:6px;background:linear-gradient(135deg,var(--acc),#8e6bd8);cursor:pointer;min-width:6px;transform-origin:0 50%;animation:growx .7s var(--spring) both}
+.dlbar i.past{opacity:.35}.dlbar i.grp{background:linear-gradient(135deg,#8e6bd8,#c2459a)}
+.dlbar em{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--bad);border-radius:1px}.dlbar em:before{content:"";position:absolute;top:-4px;left:-3px;width:8px;height:8px;border-radius:50%;background:var(--bad)}
+.dlx{position:relative;height:16px;font-size:10.5px;color:var(--hint)}.dlx span{position:absolute;top:3px;transform:translateX(-50%)}
+.cmpln{stroke-dasharray:1200;stroke-dashoffset:1200;animation:drawl 1.4s var(--out) .15s forwards}@keyframes drawl{to{stroke-dashoffset:0}}
+.timerbtn{float:right;border:0;border-radius:10px;padding:6px 10px;background:var(--soft);color:var(--acc);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+#tmr{position:fixed;left:50%;top:calc(64px + env(safe-area-inset-top));transform:translateX(-50%);z-index:16;display:flex;align-items:center;gap:8px;padding:7px 14px 7px 8px;border-radius:22px;
+  background:linear-gradient(135deg,var(--acc),#7a3fc4);color:#fff;font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:pointer;animation:pop .45s var(--spring) both}
+#tmr svg{width:26px;height:26px}#tmr.warn{background:linear-gradient(135deg,#f6b73c,#f08a24)}#tmr.over{background:linear-gradient(135deg,#f0645a,#d64545);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{transform:translateX(-50%) scale(1.05)}}
+.qnote textarea{min-height:90px;background:var(--bg2);border:0}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
 /* Общие ограничения для длинных имён, адресов и узких экранов. */
 :root{--field-line:#8a9099;--field-line:color-mix(in srgb,var(--fg) 45%,var(--bg))}
@@ -792,6 +808,71 @@ async function previewPick() {
     <p class="ph">Выберите ученика — откроется его кабинет-приложение так, как видит он. Только просмотр: записаться или что-то отправить отсюда нельзя.</p>
     <div class="list stag">${d.items.map(x => `<div class="li" onclick="SHEET_BACK=null;closeSheetRaw();previewAs(${x.id},'${esc(x.name).replace(/'/g, "")}')">${ava(x.name, 30)}<div class="t">${esc(x.name)}<small>${x.next ? "след. " + dShort(x.next) + " " + hm(x.next) : "без записи"}</small></div><span class="chev">›</span></div>`).join("")}</div>`);
 }
+
+// ---------- 🕐 таймлайн дня ----------
+function dayLine(items) {
+  const now = new Date(Date.now() + SKEW), ls = items.filter(x => x.start);
+  if (!ls.length) return "";
+  const t = x => { const d = dt(x); return d.getHours() + d.getMinutes() / 60; };
+  const a = Math.min(9, Math.floor(Math.min(...ls.map(x => t(x.start))))), b = Math.max(21, Math.ceil(Math.max(...ls.map(x => t(x.end)))));
+  const pos = h => ((h - a) / (b - a) * 100).toFixed(2) + "%", nh = now.getHours() + now.getMinutes() / 60;
+  const left = ls.filter(x => dt(x.end) > now);
+  const mins = left.reduce((s, x) => s + (dt(x.end) - Math.max(dt(x.start), now)) / 60000, 0);
+  return `<div class="card dline"><div class="dlh"><b>🕐 День</b><span>${left.length ? `осталось ${left.length} ${plural(left.length, "занятие", "занятия", "занятий")} · ${Math.round(mins / 6) / 10} ч` : "все занятия позади 🎉"}</span></div>
+    <div class="dlbar">${ls.map(x => `<i class="${dt(x.end) < now ? "past" : ""}${x.kind === "group" ? " grp" : ""}" style="left:${pos(t(x.start))};width:calc(${pos(t(x.end))} - ${pos(t(x.start))})" title="${hm(x.start)} ${esc(x.name)}" ${x.kind === "lesson" ? `onclick="openLesson(${x.id})"` : ""}></i>`).join("")}
+      ${nh > a && nh < b ? `<em style="left:${pos(nh)}"></em>` : ""}</div>
+    <div class="dlx">${Array.from({length: Math.floor((b - a) / 3) + 1}, (_, i) => `<span style="left:${pos(a + i * 3)}">${a + i * 3}</span>`).join("")}</div></div>`;
+}
+// ---------- 📈 этот месяц против прошлого ----------
+function cmpChart(c) {
+  const W = 320, H = 150, P = 8, n = Math.max(c.days, c.prev.length), mx = Math.max(1, ...c.cur, ...c.prev);
+  const xy = (i, v) => [P + i / (n - 1) * (W - 2 * P), H - 20 - v / mx * (H - 34)];
+  const path = arr => arr.map((v, i) => (i ? "L" : "M") + xy(i, v).map(z => z.toFixed(1)).join(" ")).join(" ");
+  const last = c.cur.at(-1) || 0, same = c.prev[Math.min(c.cur.length, c.prev.length) - 1] || 0, diff = last - same;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}"><path d="${path(c.prev)}" fill="none" stroke="var(--hint)" stroke-width="2" stroke-dasharray="4 4" opacity=".6"/>
+      <path class="cmpln" d="${path(c.cur)}" fill="none" stroke="var(--acc)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      ${c.cur.length ? `<circle cx="${xy(c.cur.length - 1, last)[0]}" cy="${xy(c.cur.length - 1, last)[1]}" r="5" fill="var(--acc)"/>` : ""}
+      <text x="${P}" y="${H - 4}">1</text><text x="${W - P}" y="${H - 4}" text-anchor="end">${n}</text></svg>
+    <p class="hint" style="margin:6px 0 0">— этот месяц · - - прошлый. На ${c.today}-е число: ${money(last)} — <b class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "+" : "−"}${money(Math.abs(diff))}</b> к прошлому месяцу на ту же дату</p>`;
+}
+// ---------- ✉️ сообщение ученику с шаблонами ----------
+const TPL = [["⏰ Напомнить о занятии", n => `${n}, напоминаю о нашем занятии {следующее}. До встречи!`],
+             ["🙏 Спасибо за урок", n => `${n}, спасибо за занятие! Отлично поработали 💪`],
+             ["📝 Про домашку", n => `${n}, не забудь про домашнее задание — пришли, как будет готово.`],
+             ["💳 Про оплату", n => `${n}, напоминаю про оплату занятий. Спасибо!`],
+             ["🤒 Перенос", n => `${n}, к сожалению, не смогу провести занятие {следующее}. Давай подберём другое время?`],
+             ["🎉 Похвалить", n => `${n}, ты большой молодец — прогресс заметен! Так держать 🔥`]];
+async function msgSheet(sid) {
+  const c = CARD && CARD.id === sid ? CARD : await api("student", `?id=${sid}`);
+  const first = (c.name || "").split(" ")[0], nx = c.next && c.next[0] ? `${dShort(c.next[0].start)} в ${hm(c.next[0].start)}` : "в ближайшее время";
+  openSheet(`<div class="sh-h"><b>✉️ ${esc(c.name)}</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
+    <div class="strip">${TPL.map(([t], i) => `<button class="chip" onclick="document.getElementById('msg-t').value=TPL[${i}][1](${esc(JSON.stringify(first))}).replace('{следующее}',${esc(JSON.stringify(nx))});document.getElementById('msg-t').focus()">${t}</button>`).join("")}</div>
+    <textarea id="msg-t" rows="5" maxlength="3500" placeholder="Текст сообщения — придёт ученику от бота"></textarea>
+    <button class="act pri" style="width:100%;margin-top:8px" onclick="msgSend(${sid},this)">📨 Отправить</button>`, () => openStudent(sid));
+}
+async function msgSend(sid, btn) {
+  btn.disabled = true;
+  try { toast((await post("x", {action: "msg", sid, text: val("msg-t")})).note); SHEET_BACK = null; openStudent(sid); } catch (ex) { toast(ex.message); btn.disabled = false; }
+}
+// ---------- ⏱ таймер занятия ----------
+let TIMER = null;
+function startTimer(id) {
+  const x = LS[id]; if (!x) return; const end = dt(x.end), start = dt(x.start), total = end - start;
+  clearInterval(TIMER && TIMER.i); let el = document.getElementById("tmr");
+  if (!el) { el = document.createElement("div"); el.id = "tmr"; document.body.appendChild(el); }
+  el.onclick = () => { if (confirm("Остановить таймер?")) { clearInterval(TIMER.i); el.remove(); TIMER = null; } };
+  const tick = () => { const nowT = Date.now() + SKEW, left = end - nowT, done = Math.min(1, Math.max(0, (nowT - start) / total));
+    const m = Math.max(0, Math.round(left / 60000));
+    el.innerHTML = `<svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="${94.2 * done} 94.2" transform="rotate(-90 18 18)" stroke-linecap="round"/></svg>
+      <span>${nowT < start ? "до начала " + Math.round((start - nowT) / 60000) + " мин" : left > 0 ? `${esc(x.name.split(" ")[0])} · осталось ${m} мин` : "⏰ время вышло"}</span>`;
+    el.classList.toggle("warn", left > 0 && left < 5 * 60000); el.classList.toggle("over", left <= 0);
+    if (left <= 0 && !TIMER.rang) { TIMER.rang = 1; haptic("warning"); } };
+  TIMER = {i: setInterval(tick, 15000)}; tick(); SHEET_BACK = null; closeSheet(); toast("⏱ Таймер запущен — нажмите на него, чтобы остановить");
+}
+// ---------- 🗒 заметки на полях ----------
+let QN_T = 0;
+function qnSave() { const st = document.getElementById("qn-st"); if (st) st.textContent = "сохраняю…"; clearTimeout(QN_T);
+  QN_T = setTimeout(async () => { try { await post("x", {action: "note", text: val("qn")}); if (st) st.textContent = "сохранено ✓"; try { localStorage.removeItem("pc:overview"); } catch (_) {} } catch (ex) { if (st) st.textContent = ex.message; } }, 800); }
 // ---------- Сегодня ----------
 const LS = {};   // занятия по номеру — для карточки занятия
 function tagOf(x) {
@@ -828,6 +909,7 @@ async function home(dIn, pIn) {
       <span>${d.debtors.length} чел.</span></div>
     <div class="kpi click" onclick="go('hw')"><span>Задания</span><b>${d.hw_wait}</b><span>ждут проверки</span></div>
   </div>
+  ${dayLine(today)}
   <div class="acts" style="margin-top:0"><button class="act pri wide" onclick="pickStart({})">➕ Записать ученика</button></div>
   ${d.pending && d.pending.length ? `<div class="card"><h2>Ждут подтверждения · ${d.pending.length}</h2>
     ${d.pending.map(x => lessonRow(x, true)).join("")}</div>` : ""}
@@ -839,10 +921,11 @@ async function home(dIn, pIn) {
     <div class="card"><h2>Кто должен</h2>
       ${d.debtors.length ? d.debtors.map(x => `<div class="row drow">${ava(x.name)}<div class="n click" data-sid="${x.id}">${esc(x.name)}<small>${x.n ? x.n + " " + plural(x.n,"занятие","занятия","занятий") : ""}</small></div>
         <div class="v debt">${money(x.sum)}</div><button class="act" onclick="paySheet(${x.id})">💳</button><button class="act" onclick="studentAction('askpayment',{sid:${x.id}},this)">📨 Запросить оплату</button></div>`).join("") : `<div class="empty">Никто не должен ✅</div>`}</div>
-  </div>` + (p ? pulseHtml(p, d) : "");
+  </div>` + (p ? pulseHtml(p, d) : "") + `<div class="card qnote"><h2>🗒 Заметки на полях</h2><textarea id="qn" placeholder="Что не забыть: купить мел, проверить пробник Пети, позвонить маме Ани…" oninput="qnSave()">${esc(d.qnote || "")}</textarea><div class="hint" id="qn-st">сохраняется само</div></div>`;
   animateHero(); NEWS = d.news; HOME = p ? {d, p} : null;
   app.querySelectorAll(".heat").forEach(h => h.scrollLeft = h.scrollWidth);
   newsCard(d.news);
+  if (p && p.goal && d.total >= p.goal) { const k = "goal-" + d.month + "-" + p.goal; try { if (!localStorage.getItem(k)) { localStorage.setItem(k, "1"); setTimeout(confetti, 600); toast("🎯 Цель месяца взята!"); } } catch (_) {} }
   if (p && p.best && d.total > p.best) { const k = "rec-" + d.month; try { if (localStorage.getItem(k) !== String(d.total)) { localStorage.setItem(k, String(d.total)); setTimeout(confetti, 500); } } catch (_) {} }
 }
 
@@ -1084,8 +1167,10 @@ async function moneyTab() {
       <div class="kpi"><span>На руки</span><b>${money(d.net)}</b><span>${d.tax_pct ? `налог ${d.tax_pct}% −${money(d.tax)}` : "налог не указан"}${d.exp ? ` · расходы −${money(d.exp)}` : ""}</span></div>
       ${d.manual ? `<div class="kpi"><span>Оплачено / ждём</span><b>${money(d.paid)}</b><span class="${d.wait ? "down" : ""}">ждём ${money(d.wait)}</span></div>` : ""}
       ${d.planned ? `<div class="kpi"><span>Ещё запланировано</span><b>${money(d.planned)}</b><span>${d.pcnt} зан.</span></div>` : ""}
+      ${d.minutes ? `<div class="kpi"><span>В час</span><b>${money(d.total / (d.minutes / 60))}</b><span>средний доход за час занятий</span></div>` : ""}
       ${d.npd ? `<div class="kpi"><span>Чеки «Мой налог»</span><b class="${d.npd_todo ? "down" : ""}">${d.npd_todo}</b><span>${d.npd_todo ? "к отправке — в боте «💰 Деньги»" : "все отправлены ✅"}</span></div>` : ""}
     </div>
+    ${d.daily && d.period === "m0" ? `<div class="card"><h2>Как идём: этот месяц и прошлый</h2>${cmpChart(d.daily)}</div>` : ""}
     <div class="card"><h2>По месяцам</h2>
     ${d.months.length ? chart(d.months) : `<div class="empty">Заработок появится, когда отметите первое занятие «✅ Проведено».</div>`}
     ${vals.length > 1 ? `<div class="empty">В среднем ${money(avg)} в месяц · лучший ${money(Math.max(...vals))}</div>` : ""}</div>
@@ -1250,7 +1335,7 @@ function openLesson(id, keepBack) {
     if (x.paid) p += `<button class="act" onclick="mark(${id},'pu','Снять отметку оплаты?')">↩️ Снять оплату</button>`;
   }
   openSheet(`<div class="sh-h"><b>${esc(x.name)}</b><button class="x" onclick="closeSheet()">✕</button></div>
-    <div class="card">${WD[(d.getDay() + 6) % 7]}, ${dShort(x.start)} · ${hm(x.start)}–${hm(x.end)}<br>
+    <div class="card"><button class="timerbtn" onclick="startTimer(${x.id})">⏱ Таймер</button>${WD[(d.getDay() + 6) % 7]}, ${dShort(x.start)} · ${hm(x.start)}–${hm(x.end)}<br>
       <span style="color:var(--hint)">${esc(x.type)}${x.price ? " · " + money(x.price) : ""}</span>
       ${x.status === "pending" ? `<br><span class="tag pend">ждёт подтверждения в боте</span>` : ""}
       ${att || x.paid ? `<div class="chips">${att ? `<span class="tag ok">${att}</span>` : ""}${tagOf({...x, att: ""})}</div>` : ""}</div>
@@ -1372,7 +1457,7 @@ async function openStudent(sid) {
          .filter(Boolean).map(t => `<div style="margin-top:6px;color:var(--hint)">${esc(t)}</div>`).join("")}
       <label>Пригласить родителя <input readonly value="${esc(d.parent_invite)}"></label>
       <button class="act" onclick="copyParentInvite()">📋 Скопировать</button></div>
-    <div class="acts"><button class="act pri" onclick="paySheet(${sid})">💳 Оплаты и счета</button><button class="act" onclick="studentAction('askpayment',{sid:${sid}},this)">📨 Запросить оплату</button>
+    <div class="acts"><button class="act wide" onclick="msgSheet(${sid})">✉️ Написать ученику</button><button class="act pri" onclick="paySheet(${sid})">💳 Оплаты и счета</button><button class="act" onclick="studentAction('askpayment',{sid:${sid}},this)">📨 Запросить оплату</button>
       ${d.manual ? `<button class="act" onclick="studentTools(${sid},'advance')">Изменить аванс</button>` : ""}
       <button class="act bad" onclick="archiveStudent(${sid},${!d.archived},this)">${d.archived ? 'Вернуть из архива' : '🗄 В архив'}</button>
       <button class="act" onclick="studentMore(${sid})">⋯ Доступ, родители, отпуск, отчёт</button>
@@ -2756,7 +2841,7 @@ const FEATURES = [
 function searchFeatures(q, oid = 'fs-out') {
   const w = q.toLowerCase().replace(/ё/g, 'е').split(/\s+/).filter(x => x.length > 1);
   const out = document.getElementById(oid); if (!out) return;
-  const hits = !w.length ? [] : FEATURES.map(f => [f, w.filter(x => (f[0] + ' ' + f[1]).toLowerCase().replace(/ё/g, 'е').includes(x.slice(0, Math.max(3, x.length - 2)))).length]).filter(x => x[1]).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const hits = !w.length ? [] : smartFeatures(q).slice(0, 8).map(f => [f, 1]);
   out.innerHTML = hits.length ? `<div class="list">${hits.map(([f]) => `<div class="li" onclick="${f[2]}"><div class="t">${esc(f[0])}</div><span class="chev">›</span></div>`).join('')}</div>` : (w.length ? '<p class="ph">Не нашёл. Попробуйте другими словами.</p>' : '');
 }
 let HELP = null;
@@ -2893,6 +2978,33 @@ function qsMark(text, q) {
   const t = esc(text), w = q.trim().split(/\s+/).filter(x => x.length > 1).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return w.length ? t.replace(new RegExp("(" + w.join("|") + ")", "gi"), "<mark>$1</mark>") : t;
 }
+let ASK = [];
+async function askRun(i, btn) {
+  const a = ASK[i]; if (!a) return;
+  if (a.t === "js") { qsClose(); try { (new Function(a.js))(); } catch (ex) { toast("Не получилось открыть"); } return; }
+  if (a.confirm && !(await confirmAsk(a.confirm))) return;
+  btn.disabled = true;
+  try {
+    const j = await post(a.ep, a.body); toast(j.note || "✅ Готово"); haptic("success");
+    try { Object.keys(localStorage).filter(x => x.startsWith("pc:")).forEach(x => localStorage.removeItem(x)); } catch (_) {}
+    qsClose(); go(tab);
+  } catch (ex) { toast(ex.message); btn.disabled = false; }
+}
+function openWeekOf(iso) { W = monday(new Date(iso + "T12:00:00")); go("week"); }
+// умный подбор функций: основы слов и опечатки («реквезиты» ≈ «реквизиты»)
+function lev(a, b) { if (Math.abs(a.length - b.length) > 1) return 9; const m = a.length, n = b.length, d = Array.from({length: m + 1}, (_, i) => [i]);
+  for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[m][n]; }
+function smartFeatures(q) {
+  const ws = _n(q).split(/[^a-zа-я0-9]+/).filter(w => w.length > 2);
+  if (!ws.length) return [];
+  return FEATURES.map(f => { const toks = _n(f[0] + " " + f[1]).split(/[^a-zа-я0-9]+/).filter(Boolean); let sc = 0;
+      for (const w of ws) { const st = w.slice(0, Math.max(3, Math.min(5, w.length - 1)));
+        if (toks.some(t => t.startsWith(st) || st.startsWith(t.slice(0, 4)) && t.length > 3)) sc += 2;
+        else if (w.length >= 5 && toks.some(t => t.length >= 5 && lev(w.slice(0, 7), t.slice(0, 7)) <= 1)) sc += 1; }
+      return [f, sc]; }).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+}
 async function quickSearch(start) {
   let el = document.getElementById("qs");
   if (!el) { el = document.createElement("div"); el.id = "qs"; document.body.appendChild(el);
@@ -2908,14 +3020,20 @@ async function quickSearch(start) {
 }
 async function qsRun() {
   const q = document.getElementById("qs-in").value.trim(), out = document.getElementById("qs-res"), my = ++QS_N;
-  if (!q) { out.innerHTML = `<p class="ph" style="padding:10px 6px;color:#fff;opacity:.85">Ищу везде: ученики (и архив, заметки, цели), занятия, задания, библиотека, группы, оплаты, журнал и функции панели.</p>`; return; }
-  const fs = q.length > 2 ? FEATURES.filter(f => _n(f[0] + " " + f[1]).includes(_n(q))).slice(0, 5) : [];
-  let d; try { d = await api("search", "?q=" + encodeURIComponent(q)); } catch (_) { d = null; }
+  if (!q) { out.innerHTML = `<p class="ph" style="padding:10px 6px;color:#fff;opacity:.85">Пишите как человеку: «Аня завтра 15», «перенеси Максима на четверг 17», «Боря оплатил 2000», «Аня не пришла», «закрой пятницу 10-13», «свободно завтра», «что в среду», «пробники Пети», «счёт Ане». Ищу и везде: ученики, занятия, задания, библиотека, группы, оплаты, журнал, функции.</p>`; return; }
+  const fs = q.length > 2 ? smartFeatures(q).slice(0, 6) : [];
+  const enc = encodeURIComponent(q);
+  const [d, k] = await Promise.all([api("search", "?q=" + enc).catch(() => null), api("ask", "?q=" + enc).catch(() => null)]);
   if (my !== QS_N) return;
   const sec = (title, items) => items.length ? `<div class="qs-h">${title}</div><div class="list">${items.join("")}</div>` : "";
   const row = (ic, t, sub, on) => `<div class="li" onclick="qsClose();${on}">${ic}<div class="t">${t}${sub ? `<small>${sub}</small>` : ""}</div><span class="chev">›</span></div>`;
   const icn = e => `<span class="ic">${e}</span>`;
   let html = "";
+  if (k && k.acts && k.acts.length) {   // ⚡ понял как команду — готовые действия
+    ASK = k.acts;
+    html += `<div class="qs-h">⚡ Сделать</div><div class="askbox"><div class="asksay">${esc(k.say)}</div><div class="askacts">${k.acts.map((a, i) =>
+      `<button class="${a.primary ? "pri" : a.danger ? "bad" : ""}" onclick="askRun(${i},this)">${esc(a.label)}</button>`).join("")}</div></div>`;
+  }
   if (d) {
     d.lessons.forEach(x => LS[x.id] = x);
     html += sec("👥 Ученики", d.students.map(x => row(ava(x.name, 30), qsMark(x.name, q) + (x.archived ? ' <span class="tag">архив</span>' : ""), x.where ? qsMark(x.where, q) : (x.user ? "@" + esc(x.user) : ""), `openStudent(${x.id})`)));
@@ -2926,7 +3044,7 @@ async function qsRun() {
     html += sec("💳 Оплаты", d.payments.map(x => row(icn("💳"), `${money(x.amount)} · ${esc(x.name)}`, `${esc(x.at)}${x.note ? " · " + qsMark(x.note, q) : ""}`, x.sid ? `paySheet(${x.sid})` : "")));
     html += sec("🧾 Журнал", d.journal.map(x => row(icn("🧾"), qsMark(x.text, q), esc(x.at), `journalSheet(${x.sid})`)));
   }
-  html += sec("⚙️ Функции панели", fs.map(f => row(icn("⚙️"), qsMark(f[0], q), "", f[2])));
+  if (!(k && k.acts && k.acts.length)) html += sec("⚙️ Функции панели", fs.map(f => row(icn("⚙️"), qsMark(f[0], q), "", f[2])));
   out.innerHTML = html || `<div class="list"><div class="empty" style="padding:14px">Ничего не нашлось по «${esc(q)}»</div></div>`;
 }
 const _n = s => String(s || "").toLowerCase().replace(/ё/g, "е");
@@ -3026,7 +3144,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === "/") { e.preventDefault(); go("tools").then(() => { const q = document.querySelector("#app input"); if (q) q.focus(); }); }
 });
 // Версию подставляет сервер: прежняя личная ссылка получает новый интерфейс сама.
-const PAGE_VERSION = "2026.10.20-79";
+const PAGE_VERSION = "2026.10.20-82";
 let VERSION_BUSY = false;
 // Новая версия вышла, а открыта сохранённая прежняя (так панель открывается мгновенно): без перезагрузок «в цикле» —
 // просто полоска. Новая версия докачивается в фоне и включится при следующем открытии сама; кнопка — сразу.
