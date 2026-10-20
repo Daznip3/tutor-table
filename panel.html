@@ -18,6 +18,8 @@
   const q = new URLSearchParams(location.search), u = q.get("u") || "", k = q.get("k");
   if (!/^https:\/\/[a-z0-9.-]+(\/[A-Za-z0-9_\/-]*)?$/i.test(u)) { m.textContent = "Откройте панель кнопкой в боте."; return; }
   const base = u.replace(/\/*$/, "/");
+  const T0 = Date.now(), log = [], say = t => { log.push(t); m.innerHTML = "Загружаю панель…<br><small>" + log.join("<br>") + "</small>"; };
+  const sec = () => ((Date.now() - T0) / 1000).toFixed(1) + " с";
   const show = html => { document.open(); document.write(html.replace(/<head>/i, '<head><base href="' + base + '">')); document.close(); };
   const keep = (key, html) => { try { Object.keys(localStorage).filter(x => x.startsWith("pg-app:") && x !== key).forEach(x => localStorage.removeItem(x)); localStorage.setItem(key, html); } catch (_) {} };
   const timed = (url, opt, ms) => { const c = new AbortController(); setTimeout(() => c.abort(), ms); return fetch(url, {...opt, signal: c.signal}); };
@@ -39,8 +41,9 @@
       digest().then(async x => { if (x.d && "pg-app:" + x.d !== cached[0]) keep("pg-app:" + x.d, await app(x.d)); }).catch(() => {});
       return;
     }
-    const x = await digest();
-    if (x.d) { try { const h = await app(x.d); keep("pg-app:" + x.d, h); show(h); return; } catch (_) {} }
+    say("связь с ботом…");
+    const x = await digest(); say("бот ответил: " + sec());
+    if (x.d) { try { say("код панели с GitHub…"); const h = await app(x.d); keep("pg-app:" + x.d, h); show(h); return; } catch (_) { say("GitHub не отдал код (" + sec() + "), берём у бота"); } }
     if (x.text.indexOf("telegram-web-app.js") < 0 && x.text.indexOf("__PANEL_BOOT") < 0 && x.text.indexOf("BOOT") < 0) throw new Error("not panel");
     show(x.text);                                   // прежний путь: загрузчик с самого бота (кусками)
   } catch (e) {
