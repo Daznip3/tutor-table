@@ -80,6 +80,8 @@ a.lk{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:14
 .times button{position:relative;border:0;border-radius:12px;padding:12px 0;background:var(--bg);color:var(--fg);font:inherit;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;animation:pop .3s var(--out) both}
 .times button i{position:absolute;top:2px;right:4px;font-style:normal;font-size:10px}.times button.on{background:var(--acc);color:var(--accfg)}
 .hint2{color:var(--hint);font-size:12.5px;margin:10px 2px 0}
+.kids{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:13.5px;color:var(--hint)}.kids span{margin-right:4px}
+.kids button{border:0;border-radius:20px;padding:6px 12px;background:var(--bg);color:var(--fg);font:inherit;font-size:13.5px;cursor:pointer}.kids button.on{background:var(--acc);color:var(--accfg)}
 .pv{background:linear-gradient(90deg,#f6b73c,#f08a24);color:#fff;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:600;margin-bottom:8px;text-align:center}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.chart .ln{stroke-dashoffset:0}}
 </style></head><body>
@@ -96,7 +98,8 @@ function tgInit() { const w = window.Telegram && Telegram.WebApp; if (!w || tg |
 const s = document.createElement("script"); s.async = true; s.src = "https://telegram.org/js/telegram-web-app.js"; s.onload = tgInit; document.head.appendChild(s);
 const app = document.getElementById("app");
 const HDR = () => ({"X-Init-Data": INIT, "X-Panel-Key": PK, "tuna-skip-browser-warning": "1"});
-const QS = (extra) => { const p = new URLSearchParams(extra || ""); if (AS) p.set("as", AS); const t = p.toString(); return t ? "?" + t : ""; };
+let CHILD = /^\d+$/.test(Q.get("child") || "") ? Q.get("child") : "";
+const QS = (extra) => { const p = new URLSearchParams(extra || ""); if (AS) p.set("as", AS); if (CHILD) p.set("child", CHILD); const t = p.toString(); return t ? "?" + t : ""; };
 const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const MON = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"], WD = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
 const dt = x => x ? new Date(x.replace(" ", "T") + ":00") : null;
@@ -109,7 +112,7 @@ const haptic = k => { try { tg && tg.HapticFeedback && tg.HapticFeedback.impactO
 function until(x) { const ms = dt(x) - Date.now() - SKEW; if (ms <= 0) return "идёт сейчас"; const m = Math.round(ms / 60000);
   if (m < 60) return `через ${m} мин`; const h = Math.floor(m / 60); if (h < 24) return `через ${h} ч ${m % 60} мин`; const d = Math.round(h / 24); return `через ${d} ${plural(d, "день", "дня", "дней")}`; }
 async function load() {
-  const key = "me:" + BASE + AS;
+  const key = "me:" + BASE + AS + ":" + CHILD;
   try { const c = localStorage.getItem(key); if (c) { D = JSON.parse(c); render(); } } catch (_) {}
   try {
     const c = new AbortController(); setTimeout(() => c.abort(), 15000);
@@ -145,18 +148,18 @@ function render() {
   const meet = nx && (nx.meet || (d.links.find(l => l.kind === "m") || {}).url);
   const pages = {
     home: `<div class="hero"><div class="orb">⚗️</div><div class="sub">${new Date().toLocaleDateString("ru-RU", {weekday: "long", day: "numeric", month: "long"})}</div>
-        <h1>Привет, ${esc(d.name.split(" ")[0])}!</h1><div class="sub">${d.cat ? esc(d.cat) + " · " : ""}${d.done} ${plural(d.done, "занятие", "занятия", "занятий")} позади</div>
-        ${d.streak >= 2 ? `<span class="badge">🔥 ${d.streak} ${plural(d.streak, "неделя", "недели", "недель")} подряд</span>` : ""}
+        <h1>${d.parent ? esc(d.name) : `Привет, ${esc(d.name.split(" ")[0])}!`}</h1><div class="sub">${d.cat ? esc(d.cat) + " · " : ""}${d.done} ${plural(d.done, "занятие", "занятия", "занятий")} позади</div>
+        ${d.vacation ? `<span class="badge">⏸ отпуск до ${esc(d.vacation.slice(8, 10) + "." + d.vacation.slice(5, 7))}</span> ` : ""}${d.streak >= 2 ? `<span class="badge">🔥 ${d.streak} ${plural(d.streak, "неделя", "недели", "недель")} подряд</span>` : ""}
         ${nx ? `<div class="next"><span class="cd" data-cd="${nx.start}">${until(nx.start)}</span><div>Следующее занятие</div><b>${dLong(nx.start)}, ${hm(nx.start)}</b><div style="opacity:.85;font-size:13px">${esc(nx.type)}${nx.pending ? " · ждёт подтверждения" : ""}</div>
           ${meet ? `<a class="go" href="${esc(meet)}" target="_blank" rel="noopener" onclick="return openLink(this.href)">🎥 Подключиться к занятию</a>` : ""}</div>`
-          : `<div class="next"><b>Ближайших занятий нет</b><button class="go" style="width:100%;border:0;font:inherit;font-weight:700" onclick="openBook()">📅 Записаться</button></div>`}</div>
+          : `<div class="next"><b>Ближайших занятий нет</b><button class="go" style="width:100%;border:0;font:inherit;font-weight:700" onclick="${d.parent ? "toBot()" : "openBook()"}">📅 Записаться</button></div>`}</div>
       <div class="chips"><div class="st"><b>${d.done}</b><span>занятий</span></div><div class="st"><b>${todo.length}</b><span>заданий</span></div>
         <div class="st"><b>${d.mocks.length ? d.mocks.at(-1).value : "—"}</b><span>пробник</span></div>
         <div class="st"><b style="color:${d.balance < 0 ? "var(--bad)" : "inherit"}">${d.balance === null ? "—" : d.balance < 0 ? "−" + Math.abs(d.balance) : d.balance}</b><span>${d.balance === null ? "баланс" : d.balance < 0 ? "к оплате" : "аванс"}</span></div></div>
       ${d.next.length > 1 ? `<div class="card"><h2>Дальше по расписанию</h2>${d.next.slice(1).map(b => `<div class="row"><div class="ic">📅</div><div class="n"><b>${dLong(b.start)}, ${hm(b.start)}</b><small>${esc(b.type)}</small></div>${b.pending ? '<span class="tag wait">ждёт</span>' : ''}</div>`).join("")}</div>` : ""}
       ${d.links.length ? `<div class="card"><h2>Всё для урока</h2>${d.links.map(l => `<a class="lk" href="${esc(l.url)}" onclick="return openLink(this.href)"><span class="ic">${l.icon}</span><span>${esc(l.title)}</span></a>`).join("")}</div>` : ""}
       ${todo.length ? `<div class="card"><h2>Нужно сделать</h2>${todo.slice(0, 3).map(hwRow).join("")}<button class="btn soft" onclick="show('hw')">Все задания</button></div>` : ""}
-      ${d.book && !d.book.block ? `<button class="btn" onclick="openBook()">📅 Записаться на занятие</button>` : ""}
+      ${d.parent ? `<button class="btn" onclick="toBot()">📅 Записать или перенести — в боте</button>` : d.book && !d.book.block ? `<button class="btn" onclick="openBook()">📅 Записаться на занятие</button>` : ""}
       <button class="btn soft" onclick="toBot()">💬 Написать преподавателю</button>`,
     hw: `<div class="card"><h2>Задания · ${d.hw.length}</h2>${d.hw.length ? d.hw.map(hwRow).join("") : `<div class="empty">Заданий пока нет 🎉</div>`}
       <p style="color:var(--hint);font-size:13px">Сдать задание — фото или файлом в чате с ботом.</p><button class="btn" onclick="toBot()">📤 Сдать в боте</button></div>`,
@@ -168,7 +171,9 @@ function render() {
     lib: `<div class="card"><h2>Лекции и материалы · ${d.lib.length}</h2>${d.lib.length ? d.lib.map(x => `<div class="row"><div class="ic">${x.kind === "lec" ? "📒" : "📦"}</div><div class="n">${esc(x.title)}${x.section ? `<small>${esc(x.section)}</small>` : ""}</div><button class="mini" onclick="act({action:'lib',id:${x.id}},this)">📩 Прислать</button></div>`).join("")
       : `<div class="empty">Преподаватель пока ничего не открыл</div>`}<p style="color:var(--hint);font-size:13px">«📩 Прислать» — файлы придут вам в чат с ботом.</p></div>`
   };
-  app.innerHTML = (d.preview ? `<div class="pv">👁 Просмотр глазами ученика · ${esc(d.name)} — действия выключены</div>` : "") + `<div class="seg">${[["home", "🏠", "Главная"], ["hw", "📝", "Задания"], ["prog", "📈", "Прогресс"], ["lib", "📚", "Материалы"]].map(([k, i, t]) =>
+  const PAR = d.parent;
+  app.innerHTML = (PAR ? `<div class="kids"><span>👨‍👩‍👧 Кабинет ребёнка</span>${PAR.children.length > 1 ? PAR.children.map(k => `<button class="${k.id === PAR.cur ? "on" : ""}" onclick="CHILD='${k.id}';D=null;load()">${esc(k.name.split(" ")[0])}</button>`).join("") : `<b>${esc(PAR.children[0].name)}</b>`}</div>` : "")
+    + (d.preview ? `<div class="pv">👁 Просмотр глазами ученика · ${esc(d.name)} — действия выключены</div>` : "") + `<div class="seg">${[["home", "🏠", "Главная"], ["hw", "📝", "Задания"], ["prog", "📈", "Прогресс"], ["lib", "📚", "Материалы"]].map(([k, i, t]) =>
     `<button class="${k === PAGE ? "on" : ""}" onclick="show('${k}')"><i>${i}</i>${t}</button>`).join("")}</div>
     ${Object.entries(pages).map(([k, h]) => `<section class="page${k === PAGE ? " on in" : ""}" id="p-${k}">${h}</section>`).join("")}`;
 }

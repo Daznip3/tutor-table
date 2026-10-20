@@ -361,6 +361,14 @@ html,body{overscroll-behavior-y:none}
 .pvphone iframe{width:100%;height:100%;border:0;background:var(--bg2)}
 .row .n,.li .t,.lead .n,.card p,.ev{overflow-wrap:anywhere}
 html,body{overflow-x:clip}
+.eye{flex:none;border:0;background:var(--soft);color:var(--acc);border-radius:10px;width:36px;height:32px;font-size:16px;cursor:pointer}
+.pvgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.pvgrid img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;background:var(--bg2);cursor:zoom-in;margin:0!important;animation:pop .35s var(--out) both}
+.pvtext{margin-top:8px;max-height:260px;overflow:auto;background:var(--bg2);border-radius:10px;padding:10px 12px}
+.pvfile{display:flex!important;align-items:center;gap:10px;margin-top:8px!important;padding:12px!important}.pvfile span{font-size:22px}
+.askbox{background:var(--bg);border-radius:16px;padding:12px;animation:pop .35s var(--out) both}.asksay{font-weight:600;margin-bottom:10px}
+.askacts{display:flex;flex-wrap:wrap;gap:8px}.askacts button{border:0;border-radius:12px;padding:10px 12px;font:inherit;font-size:14px;background:var(--bg2);color:var(--fg);cursor:pointer}
+.askacts button.pri{background:var(--acc);color:var(--accfg);font-weight:600}.askacts button.bad{background:rgba(214,69,69,.13);color:var(--bad)}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
 /* Общие ограничения для длинных имён, адресов и узких экранов. */
 :root{--field-line:#8a9099;--field-line:color-mix(in srgb,var(--fg) 45%,var(--bg))}
@@ -1545,7 +1553,7 @@ function drawBank() {
     <div class="tools"><input id="bq" placeholder="🔎 Тема: гидролиз, ОВР, алканы…" value="${esc(B.q)}"></div>
     ${Object.keys(groups).length ? Object.entries(groups).map(([g, xs]) => `<div class="card"><h2>${esc(g)}</h2>
       ${xs.map(x => `<label class="row click"><input type="checkbox" data-bx="${x.id}" ${B.sel.has(x.id) ? "checked" : ""}>
-        <div class="n">${esc(x.title)}<small>${x.kind === "lec" ? "лекция" : "задание"}${x.files > 1 ? " · " + x.files + " файлов" : ""}${x.uses ? " · выдавали " + x.uses + " раз" : ""}</small></div></label>`).join("")}</div>`).join("")
+        <div class="n">${esc(x.title)}<small>${x.kind === "lec" ? "лекция" : "задание"}${x.files > 1 ? " · " + x.files + " файлов" : ""}${x.uses ? " · выдавали " + x.uses + " раз" : ""}</small></div><button class="eye" onclick="event.preventDefault();event.stopPropagation();libPreview(${x.id})" title="Что внутри">👁</button></label>`).join("")}</div>`).join("")
       : `<div class="card empty">${B.q ? "Ничего не нашлось" : "Банк пуст — лекции и заготовки добавляются в боте («📚 Задания»)."}</div>`}
     ${B.sel.size ? `<div class="acts" style="position:sticky;bottom:10px"><button class="act pri wide" onclick="B.step=2;drawBank()">Дальше — кому (${B.sel.size}) ›</button></div>` : ""}`;
   let t = 0; document.getElementById("bq").oninput = e => { clearTimeout(t); t = setTimeout(() => bankTab(e.target.value.trim()), 350); };
@@ -1675,6 +1683,7 @@ async function openHw(id) {
   const can = ["submitted", "checked", "returned"].includes(d.status);
   openSheet(`<div class="sh-h"><b>${esc(d.name)}</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
     <div class="card"><h2>Задание #${d.id} · ${esc(st)}</h2><div class="pre">${esc(d.task_preview || "—")}</div>
+      <div id="hw-task" class="ans"><button class="act" style="width:100%;margin-top:8px" onclick="loadTask(${d.id},this.parentNode)">👁 Показать, что было выдано</button></div>
       <div class="empty" style="font-size:13px">${d.deadline ? "срок " + dShort(d.deadline.replace(" ", "T")) : ""}${d.submitted ? " · сдано " + dShort(d.submitted.replace(" ", "T")) : ""}${d.grade ? " · оценка " + esc(d.grade) : ""}</div></div>
     <div class="card ans"><h2>Ответ ученика</h2>${items || (hasMsg ? "" : `<div class="empty">Ученик ещё не сдал</div>`)}
       ${hasMsg ? `<button class="act wide" style="margin-top:8px" onclick="hwToChat(${d.id})">📨 Показать ответ в чате с ботом</button>` : ""}</div>
@@ -2461,10 +2470,35 @@ async function libSaveNew(kind, button) {
     toast((await post('library', {action: 'new', kind, section: val('ln-sec'), title: val('ln-title'), topic: val('ln-topic'), text, msgs})).note); LIB_OPEN = val('ln-sec'); await librarySheet(); }
   catch (ex) { toast(ex.message); button.disabled = false; }
 }
+// 👁 предпросмотр материала: картинки — сразу, файлы — ссылкой, текст — текстом (как ответ ученика)
+function mediaHtml(items) {
+  if (!items.length) return `<div class="empty">Пусто</div>`;
+  const ph = items.filter(it => it.kind === "photo");
+  return (ph.length ? `<div class="pvgrid">${ph.map(it => `<img loading="lazy" data-full="1" src="${esc(it.url)}" alt="">`).join("")}</div>` : "")
+    + items.filter(it => it.kind !== "photo").map(it => it.kind === "text" ? `<div class="pre pvtext">${esc(it.text)}</div>`
+      : it.kind === "gone" ? `<div class="hint">⚠️ ${esc(it.name || "Часть")} — исходное сообщение удалено из чата</div>`
+      : `<a class="lk pvfile" data-open="${esc(new URL(it.url || "", document.baseURI).href)}" href="#"><span>${it.kind === "document" && /\.pdf$/i.test(it.name) ? "📕" : it.kind === "video" ? "🎬" : it.kind === "voice" ? "🎙" : "📄"}</span>${esc(it.name || "файл")}</a>${it.text ? `<div class="hint">${esc(it.text)}</div>` : ""}`).join("")
+    + (ph.length && ph.some(it => it.text) ? `<div class="hint">${ph.filter(it => it.text).map(it => esc(it.text)).join("<br>")}</div>` : "");
+}
+async function loadPreview(id, box) {
+  try { const d = await api("libpreview", `?id=${id}`); if (box) box.innerHTML = `<h2>Что внутри · ${d.items.length}</h2>` + mediaHtml(d.items); return d; }
+  catch (ex) { if (box) box.innerHTML = `<div class="empty">Не получилось показать: ${esc(ex.message)}</div>`; }
+}
+async function loadTask(id, box) {
+  box.innerHTML = `<div class="skel" style="height:110px;margin:8px 0 0"></div>`;
+  try { const d = await api("hwtask", `?id=${id}`); box.innerHTML = mediaHtml(d.items); }
+  catch (ex) { box.innerHTML = `<div class="hint">Не получилось показать: ${esc(ex.message)}</div>`; }
+}
+async function libPreview(id) {
+  openSheet(`<div class="sh-h"><b>👁 Что внутри</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div><div id="lib-pv2" class="card ans pvbox"><div class="skel" style="height:160px;margin:0"></div></div>`, () => { SHEET_BACK = null; closeSheetRaw(); });
+  const d = await loadPreview(id, document.getElementById("lib-pv2"));
+  if (d) { const h = sheet.querySelector(".sh-h b"); if (h) h.textContent = "👁 " + d.title; }
+}
 async function libItem(id) {
   const d = await api('library', `?item=${id}`), x = d.item; LIB = d;
+  setTimeout(() => loadPreview(id, document.getElementById("lib-pv")), 0);
   openSheet(`<div class="sh-h"><b>${x.kind === 'lec' ? '📒' : '📦'} ${esc(x.title)}</b><button class="x" onclick="SHEET_BACK=null;closeSheet()">✕</button></div>
-    <div class="list">${x.files.map(n => `<div class="li static"><span class="ic">📄</span><div class="t">${esc(n)}</div></div>`).join('')}</div>
+    <div id="lib-pv" class="card ans pvbox"><div class="skel" style="height:120px;margin:0"></div></div>
     <div class="acts"><button class="act" onclick="libPost({action:'preview',id:${id}},this,null,()=>libItem(${id}))">👀 Прислать мне в чат</button>
       <button class="act pri" onclick="SHEET_BACK=null;closeSheet();go('hw')">📤 Выдать</button></div>
     <div class="card set"><label>Название <input id="li-title" maxlength="60" value="${esc(x.title)}"></label><label>Тема <input id="li-topic" maxlength="40" value="${esc(x.topic)}"></label>
@@ -2725,7 +2759,7 @@ const FEATURES = [
 function searchFeatures(q, oid = 'fs-out') {
   const w = q.toLowerCase().replace(/ё/g, 'е').split(/\s+/).filter(x => x.length > 1);
   const out = document.getElementById(oid); if (!out) return;
-  const hits = !w.length ? [] : FEATURES.map(f => [f, w.filter(x => (f[0] + ' ' + f[1]).toLowerCase().replace(/ё/g, 'е').includes(x.slice(0, Math.max(3, x.length - 2)))).length]).filter(x => x[1]).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const hits = !w.length ? [] : smartFeatures(q).slice(0, 8).map(f => [f, 1]);
   out.innerHTML = hits.length ? `<div class="list">${hits.map(([f]) => `<div class="li" onclick="${f[2]}"><div class="t">${esc(f[0])}</div><span class="chev">›</span></div>`).join('')}</div>` : (w.length ? '<p class="ph">Не нашёл. Попробуйте другими словами.</p>' : '');
 }
 let HELP = null;
@@ -2862,6 +2896,33 @@ function qsMark(text, q) {
   const t = esc(text), w = q.trim().split(/\s+/).filter(x => x.length > 1).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return w.length ? t.replace(new RegExp("(" + w.join("|") + ")", "gi"), "<mark>$1</mark>") : t;
 }
+let ASK = [];
+async function askRun(i, btn) {
+  const a = ASK[i]; if (!a) return;
+  if (a.t === "js") { qsClose(); try { (new Function(a.js))(); } catch (ex) { toast("Не получилось открыть"); } return; }
+  if (a.confirm && !(await confirmAsk(a.confirm))) return;
+  btn.disabled = true;
+  try {
+    const j = await post(a.ep, a.body); toast(j.note || "✅ Готово"); haptic("success");
+    try { Object.keys(localStorage).filter(x => x.startsWith("pc:")).forEach(x => localStorage.removeItem(x)); } catch (_) {}
+    qsClose(); go(tab);
+  } catch (ex) { toast(ex.message); btn.disabled = false; }
+}
+function openWeekOf(iso) { W = monday(new Date(iso + "T12:00:00")); go("week"); }
+// умный подбор функций: основы слов и опечатки («реквезиты» ≈ «реквизиты»)
+function lev(a, b) { if (Math.abs(a.length - b.length) > 1) return 9; const m = a.length, n = b.length, d = Array.from({length: m + 1}, (_, i) => [i]);
+  for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[m][n]; }
+function smartFeatures(q) {
+  const ws = _n(q).split(/[^a-zа-я0-9]+/).filter(w => w.length > 2);
+  if (!ws.length) return [];
+  return FEATURES.map(f => { const toks = _n(f[0] + " " + f[1]).split(/[^a-zа-я0-9]+/).filter(Boolean); let sc = 0;
+      for (const w of ws) { const st = w.slice(0, Math.max(3, Math.min(5, w.length - 1)));
+        if (toks.some(t => t.startsWith(st) || st.startsWith(t.slice(0, 4)) && t.length > 3)) sc += 2;
+        else if (w.length >= 5 && toks.some(t => t.length >= 5 && lev(w.slice(0, 7), t.slice(0, 7)) <= 1)) sc += 1; }
+      return [f, sc]; }).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+}
 async function quickSearch(start) {
   let el = document.getElementById("qs");
   if (!el) { el = document.createElement("div"); el.id = "qs"; document.body.appendChild(el);
@@ -2877,14 +2938,20 @@ async function quickSearch(start) {
 }
 async function qsRun() {
   const q = document.getElementById("qs-in").value.trim(), out = document.getElementById("qs-res"), my = ++QS_N;
-  if (!q) { out.innerHTML = `<p class="ph" style="padding:10px 6px;color:#fff;opacity:.85">Ищу везде: ученики (и архив, заметки, цели), занятия, задания, библиотека, группы, оплаты, журнал и функции панели.</p>`; return; }
-  const fs = q.length > 2 ? FEATURES.filter(f => _n(f[0] + " " + f[1]).includes(_n(q))).slice(0, 5) : [];
-  let d; try { d = await api("search", "?q=" + encodeURIComponent(q)); } catch (_) { d = null; }
+  if (!q) { out.innerHTML = `<p class="ph" style="padding:10px 6px;color:#fff;opacity:.85">Пишите как человеку: «Аня завтра 15», «перенеси Максима на четверг 17», «Боря оплатил 2000», «Аня не пришла», «закрой пятницу 10-13», «свободно завтра», «что в среду», «пробники Пети», «счёт Ане». Ищу и везде: ученики, занятия, задания, библиотека, группы, оплаты, журнал, функции.</p>`; return; }
+  const fs = q.length > 2 ? smartFeatures(q).slice(0, 6) : [];
+  const enc = encodeURIComponent(q);
+  const [d, k] = await Promise.all([api("search", "?q=" + enc).catch(() => null), api("ask", "?q=" + enc).catch(() => null)]);
   if (my !== QS_N) return;
   const sec = (title, items) => items.length ? `<div class="qs-h">${title}</div><div class="list">${items.join("")}</div>` : "";
   const row = (ic, t, sub, on) => `<div class="li" onclick="qsClose();${on}">${ic}<div class="t">${t}${sub ? `<small>${sub}</small>` : ""}</div><span class="chev">›</span></div>`;
   const icn = e => `<span class="ic">${e}</span>`;
   let html = "";
+  if (k && k.acts && k.acts.length) {   // ⚡ понял как команду — готовые действия
+    ASK = k.acts;
+    html += `<div class="qs-h">⚡ Сделать</div><div class="askbox"><div class="asksay">${esc(k.say)}</div><div class="askacts">${k.acts.map((a, i) =>
+      `<button class="${a.primary ? "pri" : a.danger ? "bad" : ""}" onclick="askRun(${i},this)">${esc(a.label)}</button>`).join("")}</div></div>`;
+  }
   if (d) {
     d.lessons.forEach(x => LS[x.id] = x);
     html += sec("👥 Ученики", d.students.map(x => row(ava(x.name, 30), qsMark(x.name, q) + (x.archived ? ' <span class="tag">архив</span>' : ""), x.where ? qsMark(x.where, q) : (x.user ? "@" + esc(x.user) : ""), `openStudent(${x.id})`)));
@@ -2895,7 +2962,7 @@ async function qsRun() {
     html += sec("💳 Оплаты", d.payments.map(x => row(icn("💳"), `${money(x.amount)} · ${esc(x.name)}`, `${esc(x.at)}${x.note ? " · " + qsMark(x.note, q) : ""}`, x.sid ? `paySheet(${x.sid})` : "")));
     html += sec("🧾 Журнал", d.journal.map(x => row(icn("🧾"), qsMark(x.text, q), esc(x.at), `journalSheet(${x.sid})`)));
   }
-  html += sec("⚙️ Функции панели", fs.map(f => row(icn("⚙️"), qsMark(f[0], q), "", f[2])));
+  if (!(k && k.acts && k.acts.length)) html += sec("⚙️ Функции панели", fs.map(f => row(icn("⚙️"), qsMark(f[0], q), "", f[2])));
   out.innerHTML = html || `<div class="list"><div class="empty" style="padding:14px">Ничего не нашлось по «${esc(q)}»</div></div>`;
 }
 const _n = s => String(s || "").toLowerCase().replace(/ё/g, "е");
@@ -2995,7 +3062,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === "/") { e.preventDefault(); go("tools").then(() => { const q = document.querySelector("#app input"); if (q) q.focus(); }); }
 });
 // Версию подставляет сервер: прежняя личная ссылка получает новый интерфейс сама.
-const PAGE_VERSION = "2026.10.20-78";
+const PAGE_VERSION = "2026.10.20-81";
 let VERSION_BUSY = false;
 // Новая версия вышла, а открыта сохранённая прежняя (так панель открывается мгновенно): без перезагрузок «в цикле» —
 // просто полоска. Новая версия докачивается в фоне и включится при следующем открытии сама; кнопка — сразу.
