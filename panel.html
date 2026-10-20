@@ -8,23 +8,41 @@
 </head><body>
 <div id="m">Загружаю панель…</div>
 <script>
-// Переходник веб-панели бота репетитора. Бесплатный туннель (tuna) показывает в браузере страницу
-// «Вы собираетесь посетить…» при каждом открытии. Здесь страница панели и её данные запрашиваются
-// с пометкой «tuna-skip-browser-warning» — предупреждения нет. Данных здесь нет: только загрузка панели.
+// Переходник веб-панели бота репетитора (GitHub Pages — быстрая сеть).
+// Код панели лежит здесь же (app/<версия>.html) и грузится отсюда, а не через медленный туннель tuna;
+// через туннель идут только маленькие запросы за данными. Данных учеников здесь нет.
+// Порядок: 1) копия в памяти телефона — открыть сразу; 2) узнать у бота версию (маленький ответ) и взять
+// app/<версия>.html отсюда; 3) если файла нет — прежний путь: страница панели с самого бота.
 (async () => {
   const m = document.getElementById("m");
-  const u = new URLSearchParams(location.search).get("u") || "";
+  const q = new URLSearchParams(location.search), u = q.get("u") || "", k = q.get("k");
   if (!/^https:\/\/[a-z0-9.-]+(\/[A-Za-z0-9_\/-]*)?$/i.test(u)) { m.textContent = "Откройте панель кнопкой в боте."; return; }
   const base = u.replace(/\/*$/, "/");
+  const show = html => { document.open(); document.write(html.replace(/<head>/i, '<head><base href="' + base + '">')); document.close(); };
+  const keep = (key, html) => { try { Object.keys(localStorage).filter(x => x.startsWith("pg-app:") && x !== key).forEach(x => localStorage.removeItem(x)); localStorage.setItem(key, html); } catch (_) {} };
+  const timed = (url, opt, ms) => { const c = new AbortController(); setTimeout(() => c.abort(), ms); return fetch(url, {...opt, signal: c.signal}); };
+  async function digest() {   // версия панели на сервере бота — из маленького начального ответа
+    const r = await timed(base, {headers: {"tuna-skip-browser-warning": "1"}, cache: "no-store"}, 12000);
+    const t = await r.text(), d = /"digest"\s*:\s*"([0-9a-f]{16})"/.exec(t);
+    return {d: d && d[1], text: t};
+  }
+  async function app(d) {
+    const r = await timed("app/" + d + ".html", {cache: "force-cache"}, 20000);
+    if (!r.ok) throw 0; const h = await r.text(); if (h.length < 1000 || h.indexOf("</html>") < 0) throw 0; return h;
+  }
   try {
-    const r = await fetch(base, {headers: {"tuna-skip-browser-warning": "1"}, cache: "no-store"});
-    const html = await r.text();
-    if (!r.ok || html.indexOf("telegram-web-app.js") < 0) throw new Error("not panel");
-    document.open();
-    document.write(html.replace(/<head>/i, '<head><base href="' + base + '">'));
-    document.close();
+    const cached = (() => { try { const key = Object.keys(localStorage).find(x => x.startsWith("pg-app:")); return key ? [key, localStorage.getItem(key)] : null; } catch (_) { return null; } })();
+    if (cached && cached[1].length > 1000) {
+      show(cached[1]);
+      // обновление в фоне: следующая загрузка будет уже новой версией
+      digest().then(async x => { if (x.d && "pg-app:" + x.d !== cached[0]) keep("pg-app:" + x.d, await app(x.d)); }).catch(() => {});
+      return;
+    }
+    const x = await digest();
+    if (x.d) { try { const h = await app(x.d); keep("pg-app:" + x.d, h); show(h); return; } catch (_) {} }
+    if (x.text.indexOf("telegram-web-app.js") < 0 && x.text.indexOf("__PANEL_BOOT") < 0 && x.text.indexOf("BOOT") < 0) throw new Error("not panel");
+    show(x.text);                                   // прежний путь: загрузчик с самого бота (кусками)
   } catch (e) {
-    const k = new URLSearchParams(location.search).get("k");     // ключ кнопки из меню бота
     location.replace(base + (k ? "?k=" + encodeURIComponent(k) : "") + location.hash);   // запасной путь: напрямую
   }
 })();
