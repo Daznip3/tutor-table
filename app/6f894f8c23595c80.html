@@ -275,9 +275,9 @@ mark{background:rgba(246,183,60,.45);color:inherit;border-radius:3px;padding:0 1
 #sheet.drag{transition:none}
 #sheet .grab{cursor:grab;touch-action:none}
 nav{position:sticky}
-nav .pill{position:absolute;top:8px;height:calc(100% - 16px);border-radius:10px;background:var(--soft);transition:transform .45s var(--spring),width .45s var(--spring);z-index:0;pointer-events:none}
-nav button{position:relative;z-index:1}nav button.on{background:none!important}
-nav button .ni{transition:transform .35s var(--spring)}nav button.on .ni{transform:translateY(-1px) scale(1.12)}
+nav button{position:relative;z-index:1;transition:background .25s var(--out),color .25s}
+nav button.on{background:var(--soft)}
+nav button .ni{transition:transform .35s var(--spring)}nav button.on .ni{transform:scale(1.08)}
 .act,.li,.row.click,.tile,.chip,.kpi.click,.lead.click,.fab,.okbtn,.s-open{position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent}
 .act:active,.chip:active,.okbtn:active{transform:scale(.97)}.act,.chip,.okbtn{transition:transform .18s var(--out),background .2s}
 .rip{position:absolute;border-radius:50%;pointer-events:none;background:currentColor;opacity:.16;transform:scale(0);animation:rip .55s var(--out) forwards}
@@ -341,6 +341,8 @@ html,body{overscroll-behavior-y:none}
 #sheet{overscroll-behavior:contain}
 #qs-res{overscroll-behavior:contain}
 #app{touch-action:pan-y pinch-zoom}
+.newscard{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--soft),rgba(142,107,216,.14));border-radius:18px;padding:12px 14px;margin-bottom:12px;cursor:pointer;animation:rise .45s var(--out) both}
+.newscard .nc-ic{font-size:22px}.newscard .n{flex:1;min-width:0}.newscard small{display:block;color:var(--hint);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.newscard .chev{color:var(--hint);font-size:20px}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
 /* Общие ограничения для длинных имён, адресов и узких экранов. */
 :root{--field-line:#8a9099;--field-line:color-mix(in srgb,var(--fg) 45%,var(--bg))}
@@ -550,6 +552,14 @@ function confetti() {
   if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
 }
 
+// «Что нового» — не всплывает само: на главной одноразовая карточка, после просмотра исчезает
+function newsCard(n) {
+  if (!n || !n.items || !n.items.length || n.seen === n.ver || window.NEWS_SHOWN) return;
+  const c = document.createElement("div"); c.className = "newscard"; c.id = "newscard";
+  c.innerHTML = `<span class="nc-ic">✨</span><div class="n"><b>Бот обновился</b><small>${esc(n.items[0].title)}</small></div><span class="chev">›</span>`;
+  c.onclick = () => { newsSheet(n, true); window.NEWS_SHOWN = 1; n.seen = n.ver; api("news-seen").catch(() => {}); c.remove(); };
+  app.prepend(c);
+}
 function newsSheet(n, force) {
   if (!n || !n.items || !n.items.length) return;
   // «видел» хранится на сервере бота: в Telegram память браузера часто стирается, и окно вылезало каждый раз
@@ -729,7 +739,7 @@ async function home(dIn, pIn) {
   </div>` + (p ? pulseHtml(p, d) : "");
   animateHero(); NEWS = d.news; HOME = p ? {d, p} : null;
   app.querySelectorAll(".heat").forEach(h => h.scrollLeft = h.scrollWidth);
-  setTimeout(() => newsSheet(d.news), 900);
+  newsCard(d.news);
   if (p && p.best && d.total > p.best) { const k = "rec-" + d.month; try { if (localStorage.getItem(k) !== String(d.total)) { localStorage.setItem(k, String(d.total)); setTimeout(confetti, 500); } } catch (_) {} }
 }
 
@@ -866,6 +876,7 @@ async function week(shift = 0) {
     <button onclick="week(1)">›</button></div>
     <div class="chips" style="justify-content:center;margin-bottom:10px">
       <button class="chip" onclick="blocksSheet()">⛔ Закрыть время / отпуск</button>
+      <button class="chip" onclick="peopleSheet()">👨‍👩‍👧 Близкие</button>
       ${lessons.length ? `<span class="chip on">💰 ${money(lessons.reduce((a, x) => a + (x.price || 0), 0))} за неделю</span>` : ""}
       ${free.length ? `<button class="chip" onclick="copyFree()">📋 Свободное время · ${Math.round(freeMin / 60)} ч</button>` : ""}
       ${ymd(W) !== ymd(monday(new Date())) ? `<button class="chip" onclick="W=null;week()">Эта неделя</button>` : ""}</div>
@@ -1628,11 +1639,14 @@ const li = (ic, title, sub, v, on) => `<div class="li" onclick="${on}"><span cla
 let TILE_N = 0;
 const tile = (ic, title, sub, on, cnt) => `<button class="tile" onclick="${on}"><i style="background:linear-gradient(135deg,${PAL[TILE_N % PAL.length]}33,${PAL[(TILE_N++ + 1) % PAL.length]}33)">${ic}</i><b>${title}</b><small>${sub}</small>${cnt ? `<span class="cnt">${cnt}</span>` : ''}</button>`;
 const SET_IC = {hours: '🕒', time: '⏱', rules: '📏', types: '📚', grp: '👥', prices: '💵', pay: '💰', requisites: '💳', costs: '🧾', rem: '🔔', texts: '💬', extra: '✨', sty: '🎨', faq: '❓', links: '🔗', sec: '🔐'};
+// «Срочно» на вкладке «Меню»: куда ведёт пункт (go на эту же вкладку ничего не делал)
+const URG_ACT = {"upd:go": "sysPost({action:'upd-go'},null,'Установить новую версию сейчас? Бот перезапустится на минуту.')",
+                 "cyq": "calendlySheet()"};
 async function operationsTab() { TILE_N = 0;
   const [d, jr] = await Promise.all([api('operations'), api('journal')]);
   OPS = d; if (!SET) SET = await api('settings');
   const urg = jr.urgent;
-  app.innerHTML = `${urg.length ? `<div class="banner"><div class="n"><b>🚨 Срочно — ждёт вашего действия</b>${urg.map(u => `<div class="urg" ${u.tab ? `onclick="go('${u.tab}')"` : ''}><span>${esc(u.title)}</span><em>${u.n}</em>${u.tab ? '<span class="chev">›</span>' : ''}</div>`).join('')}</div></div>`
+  app.innerHTML = `${urg.length ? `<div class="banner"><div class="n"><b>🚨 Срочно — ждёт вашего действия</b>${urg.map(u => `<div class="urg" ${URG_ACT[u.code] || u.tab ? `onclick="${URG_ACT[u.code] || `go('${u.tab}')`}"` : ''}><span>${esc(u.title)}</span><em>${u.n}</em>${u.tab ? '<span class="chev">›</span>' : ''}</div>`).join('')}</div></div>`
       : `<div class="banner ok"><div class="n"><b>✅ Срочного нет</b><small style="color:var(--hint)">Всё сделано — можно выдохнуть.</small></div></div>`}
     <input placeholder="🔎 Найти: реквизиты, отпуск, цена, ПИН…" style="width:100%;margin-bottom:10px" oninput="searchFeatures(this.value,'fs-out-m')"><div id="fs-out-m"></div>
     <div class="tiles">
@@ -1641,6 +1655,7 @@ async function operationsTab() { TILE_N = 0;
       ${tile('🌴', 'Отпуск', d.vacations.length ? d.vacations.map(v => esc(v.label)).join(', ') : 'Закрыть дни записи', 'vacationSheet()')}
       ${tile('📚', 'Библиотека', 'Лекции и заготовки ДЗ', 'librarySheet()')}
       ${tile('🧾', 'Журнал', jr.undo.length ? 'Есть что отменить' : 'Кто что сделал', 'journalSheet()', jr.undo.length)}
+      ${tile('👨‍👩‍👧', 'Занятость близких', 'Когда свободны и заняты', 'peopleSheet()')}
       ${tile('🛠', 'Добавить функцию', 'Заявка Claude', 'ideasSheet()')}
     </div>
     <div class="grp-t">Ещё</div><div class="list">
@@ -2519,6 +2534,12 @@ async function scheduleMore(key = '', off = 0) {
     ${d.proposals.length ? `<div class="grp-t">💡 Предложения от близких</div>${d.proposals.map(p => `<div class="card"><b>${esc(p.who)}</b><p>${esc(p.text)}</p>
       <div class="acts"><button class="act ok" onclick="miscPost({action:'proposal-ok',id:'${esc(p.id)}'},this)">✅ Одобрить — отдать Claude</button><button class="act bad" onclick="miscPost({action:'proposal-no',id:'${esc(p.id)}'},this)">❌ Отклонить</button></div></div>`).join('')}` : ''}`);
 }
+async function peopleSheet() {   // 👨‍👩‍👧 занятость близких — сразу к этому разделу
+  await scheduleMore();
+  const h = [...sheet.querySelectorAll(".grp-t")].find(x => x.textContent.includes("Занятость близких"));
+  if (h) h.scrollIntoView({behavior: "smooth", block: "start"});
+  else toast("Близких пока нет — их добавляют в боте: ⚙️ Настройки → 👨‍👩‍👧 Близкие");
+}
 async function miscPost(body, button) {
   if (button) button.disabled = true;
   try { toast((await post('misc', body)).note); await scheduleMore(); }
@@ -2570,6 +2591,7 @@ const FEATURES = [
   ['📥 Calendly', 'calendly кто записался', 'calendlySheet()'],
   ['💭 Что разобрать', 'пожелания что разобрать тема фото задачи', 'wishesSheet()'],
   ['📅 Расписание — ещё', 'чёт нечёт неделя лист ожидания близкие предложения', 'scheduleMore()'],
+  ['👨‍👩‍👧 Занятость близких', 'близкие семья родные занятость свободны заняты календарь', 'peopleSheet()'],
   ['📚 Библиотека', 'библиотека лекции заготовки банк раздел кабинет', 'librarySheet()'],
   ['🧪 Пробники и вводные', 'пробник егэ огэ баллы вводный тест трекер', 'teachingTools()'],
   ['➕ Новое задание', 'задание дз выдать домашка', 'newHomework()'],
@@ -2661,32 +2683,47 @@ async function uploadGKey(button, retried) {
 }
 const TABS = {home, students, week: () => week(0), hw: hwTab, money: moneyTab, tools:operationsTab};
 const TAB_ORDER = ["home", "students", "week", "hw", "money", "tools"];
+// Переключения вкладок идут по очереди: пока рисуется одна, следующая ждёт (берётся только последняя).
+// Иначе медленный ответ прежней вкладки мог дорисоваться поверх новой — экран «залипал».
+let GO_BUSY = null, GO_NEXT = null, GO_SEQ = 0;
 async function go(t) {
   const dir = Math.sign(TAB_ORDER.indexOf(t) - TAB_ORDER.indexOf(tab)) || 0;
   tab = t; requestAnimationFrame(movePill);
-  if (dir && !REDUCE.matches) app.animate([{opacity: .0, transform: `translateX(${dir * 22}px)`}, {opacity: 1, transform: "none"}], {duration: 320, easing: "cubic-bezier(.2,.7,.3,1)"});
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+  if (GO_BUSY) { GO_NEXT = [t, dir]; return GO_BUSY; }
+  GO_BUSY = (async () => {
+    let job = [t, dir];
+    while (job) { await goNow(job[0], job[1]); job = GO_NEXT; GO_NEXT = null; }
+  })();
+  try { await GO_BUSY; } finally { GO_BUSY = null; }
+}
+async function goNow(t, dir) {
+  const seq = ++GO_SEQ;
+  if (dir && !REDUCE.matches) app.animate([{opacity: .0, transform: `translateX(${dir * 22}px)`}, {opacity: 1, transform: "none"}], {duration: 320, easing: "cubic-bezier(.2,.7,.3,1)"});
   // Мгновенно: показать то, что было в прошлый раз (из памяти), и тихо обновить свежими данными
-  // заглушка не мелькает: из памяти экран рисуется в том же кадре
   let ok = true; STALE.clear(); USE_CACHE = true; app.innerHTML = skeleton();
   try { await TABS[t](); } catch (ex) { ok = false; USE_CACHE = false; if (STALE.size) { try { await TABS[t](); ok = true; } catch (e2) { fail(e2); } } else fail(ex); } finally { USE_CACHE = false; }
-  if (ok && STALE.size) {
-    const mine = t, old = new Map(STALE);
-    try {
-      let changed = false;
-      for (const [key, txt] of old) {
-        if (Date.now() - (FRESH[key] || 0) < 45000) continue;   // только что обновляли — не дёргаем экран
-        const w = key.slice(3); let fresh; try { fresh = JSON.stringify(await fetchT("api/" + w, {headers: AUTH, cache: "no-store"}, 9000)); } catch (_) { continue; }
-        // сравниваем без «служебных» полей (текущее время, подписанные ссылки на файлы и т. п.)
-        const norm = t => { try { return JSON.stringify(JSON.parse(t), (k, v) => /^(now|hour|cur|url|src|thumb|seen|news)$/.test(k) ? undefined : v); } catch (_) { return t; } };
-        try { localStorage.setItem(key, fresh); FRESH[key] = Date.now(); } catch (_) {}
-        if (norm(fresh) !== norm(txt)) changed = true;
-      }
-      const busy = document.getElementById("sheet").classList.contains("on") || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "");
-      if (changed && tab === mine && !busy) { const y = scrollY; app.classList.add("noanim"); await TABS[t](); scrollTo(0, y); setTimeout(() => app.classList.remove("noanim"), 600); }
-    } catch (_) {}
-  }
+  if (ok && STALE.size) refreshQuiet(t, seq, new Map(STALE));      // не ждём — следующая вкладка не стоит в очереди
   if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+}
+async function refreshQuiet(t, seq, old) {
+  try {
+    let changed = false;
+    for (const [key, txt] of old) {
+      if (Date.now() - (FRESH[key] || 0) < 45000) continue;   // только что обновляли — не дёргаем экран
+      const w = key.slice(3); let fresh; try { fresh = JSON.stringify(await fetchT("api/" + w, {headers: AUTH, cache: "no-store"}, 9000)); } catch (_) { continue; }
+      // сравниваем без «служебных» полей (текущее время, подписанные ссылки на файлы и т. п.)
+      const norm = x => { try { return JSON.stringify(JSON.parse(x), (k, v) => /^(now|hour|cur|url|src|thumb|seen|news)$/.test(k) ? undefined : v); } catch (_) { return x; } };
+      try { localStorage.setItem(key, fresh); FRESH[key] = Date.now(); } catch (_) {}
+      if (norm(fresh) !== norm(txt)) changed = true;
+    }
+    const busy = sheet.classList.contains("on") || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "");
+    if (changed && tab === t && seq === GO_SEQ && !GO_BUSY && !busy) {
+      const y = scrollY; app.classList.add("noanim"); USE_CACHE = true;
+      try { await TABS[t](); } catch (_) {} finally { USE_CACHE = false; }
+      scrollTo(0, y); setTimeout(() => app.classList.remove("noanim"), 600);
+    }
+  } catch (_) {}
 }
 document.querySelectorAll("nav button").forEach(b => { b.innerHTML = `<span class="ni">${b.dataset.i}</span>${b.textContent}`; b.onclick = () => go(b.dataset.t); });
 
@@ -2746,6 +2783,7 @@ function haptic(k) { try { if (!tg || !tg.HapticFeedback) return; if (k === "suc
 const REDUCE = matchMedia("(prefers-reduced-motion: reduce)");
 // индикатор активной вкладки — «пилюля», которая переезжает
 function movePill() {
+  return;   // подсветка — фоном самой кнопки (прежняя «едущая» плашка съезжала)
   const nav = document.getElementById("tabs"), on = nav && nav.querySelector("button.on"); if (!on) return;
   let p = nav.querySelector(".pill"); if (!p) { p = document.createElement("span"); p.className = "pill"; nav.prepend(p); }
   p.style.width = on.offsetWidth + "px"; p.style.transform = `translateX(${on.offsetLeft}px)`;
@@ -2827,11 +2865,12 @@ document.addEventListener("keydown", e => {
   else if (e.key === "/") { e.preventDefault(); go("tools").then(() => { const q = document.querySelector("#app input"); if (q) q.focus(); }); }
 });
 // Версию подставляет сервер: прежняя личная ссылка получает новый интерфейс сама.
-const PAGE_VERSION = "2026.10.20-68";
+const PAGE_VERSION = "2026.10.20-71";
 let VERSION_BUSY = false;
 // Новая версия вышла, а открыта сохранённая прежняя (так панель открывается мгновенно): без перезагрузок «в цикле» —
 // просто полоска. Новая версия докачивается в фоне и включится при следующем открытии сама; кнопка — сразу.
 function newVersionBar() {
+  return;   // новая версия включится сама при следующем открытии — ничего не всплывает
   if (document.getElementById("newver")) return;
   const b = document.createElement("div"); b.id = "newver";
   b.innerHTML = `✨ Вышла новая версия панели <button onclick="updateNow()">Обновить</button><button class="x2" onclick="this.parentNode.remove()">✕</button>`;
